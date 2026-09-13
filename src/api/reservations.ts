@@ -1,5 +1,26 @@
 import { apiFetch } from "./client";
 
+export type MyReservation = {
+  id: string;
+  status: "REQUESTED" | "ACCEPTED" | "REJECTED" | "CANCELLED" | "COMPLETED";
+  companyId: string;
+  companyName: string;
+  categoryName: string;
+  price: number | null;
+  desiredDate: string;
+  desiredTime: string;
+  address: string;
+  addressDetail: string | null;
+  hasReview: boolean;
+};
+
+export async function fetchMyReservations(): Promise<MyReservation[]> {
+  const { reservations } = await apiFetch<{ reservations: MyReservation[] }>(
+    "/api/mobile/reservations"
+  );
+  return reservations;
+}
+
 export type CreateReservationInput = {
   regionId: string;
   companyId: string;

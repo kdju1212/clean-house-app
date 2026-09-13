@@ -70,9 +70,14 @@ export default function CategoriesScreen() {
             <Text style={styles.regionLink}>{region.name} · 지역 변경</Text>
           </Pressable>
         </View>
-        <Pressable onPress={handleLogout}>
-          <Text style={styles.logout}>로그아웃</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push("/reservations")}>
+            <Text style={styles.myReservations}>내 예약</Text>
+          </Pressable>
+          <Pressable onPress={handleLogout}>
+            <Text style={styles.logout}>로그아웃</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.grid}>
@@ -97,6 +102,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   title: { fontSize: 18, fontWeight: "700" },
   regionLink: { marginTop: 6, fontSize: 13, color: "#525252", textDecorationLine: "underline" },
+  headerActions: { alignItems: "flex-end", gap: 8 },
+  myReservations: { fontSize: 12, fontWeight: "600", color: "#171717" },
   logout: { fontSize: 12, color: "#a3a3a3" },
   grid: {
     marginTop: 20,
