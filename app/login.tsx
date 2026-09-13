@@ -15,8 +15,8 @@ export default function LoginScreen() {
       // build; this call throws in plain Expo Go since the SDK is a custom
       // native module.
       const { accessToken } = await kakaoLogin();
-      await loginWithKakao(accessToken);
-      router.replace("/region-select");
+      const user = await loginWithKakao(accessToken);
+      router.replace(user.role === "COMPANY" ? "/company" : "/region-select");
     } catch (err) {
       Alert.alert(
         "로그인 실패",

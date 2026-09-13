@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
-import { getStoredToken, getSelectedRegion } from "../src/storage/auth-storage";
+import { getStoredToken, getStoredUser, getSelectedRegion } from "../src/storage/auth-storage";
 
-type Destination = "loading" | "/login" | "/region-select" | "/categories";
+type Destination = "loading" | "/login" | "/region-select" | "/categories" | "/company";
 
 /**
  * Entry route: figures out where to send the user before anything else
- * renders — no session -> /login, session but no saved region -> pick one,
- * otherwise straight to the category list. Same job the web's session
- * cookie + REGION_COOKIE checks do implicitly on every page load.
+ * renders. Company owners skip region selection entirely (they don't
+ * browse by region, they manage their own listing) and land straight on
+ * their dashboard; customers go through the region -> category flow.
  */
 export default function Index() {
   const [destination, setDestination] = useState<Destination>("loading");
@@ -21,6 +21,13 @@ export default function Index() {
         setDestination("/login");
         return;
       }
+
+      const user = await getStoredUser();
+      if (user?.role === "COMPANY") {
+        setDestination("/company");
+        return;
+      }
+
       const region = await getSelectedRegion();
       setDestination(region ? "/categories" : "/region-select");
     })();
