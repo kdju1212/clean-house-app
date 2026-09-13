@@ -1,5 +1,19 @@
 import { apiFetch } from "./client";
 
+export type CompanyService = {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  price: number;
+  description: string | null;
+};
+
+export type CompanyPhoto = {
+  id: string;
+  url: string;
+  type: "MAIN" | "WORK" | "BEFORE_AFTER";
+};
+
 export type CompanyMe = {
   company: {
     id: string;
@@ -9,14 +23,89 @@ export type CompanyMe = {
     phone: string | null;
     introText: string | null;
     businessHours: string | null;
+    mainImageUrl: string | null;
   };
   requestedCount: number;
   averageRating: number;
   reviewCount: number;
+  services: CompanyService[];
+  regionIds: string[];
+  photos: CompanyPhoto[];
 };
 
 export async function fetchCompanyMe(): Promise<CompanyMe> {
   return apiFetch<CompanyMe>("/api/mobile/company/me");
+}
+
+export async function updateCompanyProfile(input: {
+  name: string;
+  phone: string;
+  introText: string;
+  businessHours: string;
+  isAvailable: boolean;
+}): Promise<void> {
+  await apiFetch("/api/mobile/company/profile", { method: "PATCH", body: input });
+}
+
+export async function saveService(input: {
+  categoryId: string;
+  price: number;
+  description: string;
+}): Promise<void> {
+  await apiFetch("/api/mobile/company/services", { method: "POST", body: input });
+}
+
+export async function deleteCompanyService(id: string): Promise<void> {
+  await apiFetch(`/api/mobile/company/services/${id}`, { method: "DELETE" });
+}
+
+export async function setCompanyRegions(regionIds: string[]): Promise<void> {
+  await apiFetch("/api/mobile/company/regions", { method: "PUT", body: { regionIds } });
+}
+
+type SignedUploadParams = {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  signature: string;
+  publicId: string;
+};
+
+/** Mirrors uploadReviewPhoto's flow but against the company photo
+ * endpoints — signed params from our server, upload straight to
+ * Cloudinary, then confirm so the server can re-verify/re-encode it. */
+export async function uploadCompanyPhoto(
+  file: { uri: string; name: string; type: string; size: number },
+  photoType: CompanyPhoto["type"]
+): Promise<void> {
+  const signed = await apiFetch<SignedUploadParams>("/api/mobile/company/photos/upload-url", {
+    method: "POST",
+    body: { contentType: file.type, size: file.size },
+  });
+
+  const formData = new FormData();
+  formData.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+  formData.append("public_id", signed.publicId);
+  formData.append("timestamp", String(signed.timestamp));
+  formData.append("api_key", signed.apiKey);
+  formData.append("signature", signed.signature);
+
+  const uploadRes = await fetch(
+    `https://api.cloudinary.com/v1_1/${signed.cloudName}/image/upload`,
+    { method: "POST", body: formData }
+  );
+  if (!uploadRes.ok) {
+    throw new Error("사진 업로드에 실패했어요.");
+  }
+
+  await apiFetch("/api/mobile/company/photos", {
+    method: "POST",
+    body: { publicId: signed.publicId, type: photoType },
+  });
+}
+
+export async function deleteCompanyPhoto(id: string): Promise<void> {
+  await apiFetch(`/api/mobile/company/photos/${id}`, { method: "DELETE" });
 }
 
 export type CompanyReservation = {

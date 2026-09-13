@@ -79,6 +79,13 @@ export default function CompanyDashboardScreen() {
           <Text style={styles.cardBadge}>신규 {requestedCount}건</Text>
         )}
       </Pressable>
+
+      <Pressable
+        style={[styles.card, { marginTop: 10 }]}
+        onPress={() => router.push("/company/profile")}
+      >
+        <Text style={styles.cardTitle}>프로필 관리</Text>
+      </Pressable>
     </View>
   );
 }
