@@ -1,11 +1,17 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import {
   fetchCompanyReservations,
   transitionReservation,
   type CompanyReservation,
 } from "../../../src/api/company";
+import { Screen } from "../../../src/components/Screen";
+import { Card } from "../../../src/components/Card";
+import { Badge } from "../../../src/components/Badge";
+import { Button } from "../../../src/components/Button";
+import { EmptyState } from "../../../src/components/EmptyState";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
 
 const STATUS_LABEL: Record<CompanyReservation["status"], string> = {
   REQUESTED: "예약 신청",
@@ -48,7 +54,7 @@ export default function CompanyReservationsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <Text style={styles.title}>예약 관리</Text>
 
       <View style={styles.filterRow}>
@@ -70,123 +76,82 @@ export default function CompanyReservationsScreen() {
         ))}
       </View>
 
-      {!reservations ? (
-        <View style={styles.center}>
-          <ActivityIndicator />
-        </View>
-      ) : (
-        <FlatList
-          data={reservations}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-          ListEmptyComponent={<Text style={styles.empty}>아직 들어온 예약이 없어요.</Text>}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.card}
-              onPress={() => router.push(`/company/reservations/${item.id}`)}
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.customerName}>{item.customerName}</Text>
-                <Text style={styles.statusBadge}>{STATUS_LABEL[item.status]}</Text>
-              </View>
-              <Text style={styles.meta}>
-                {item.categoryName}
-                {item.price ? ` · ${item.price.toLocaleString()}원` : ""}
-              </Text>
-              <Text style={styles.meta}>
-                {new Date(item.desiredDate).toLocaleDateString("ko-KR")} {item.desiredTime}
-              </Text>
+      <FlatList
+        data={reservations ?? []}
+        keyExtractor={(item) => item.id}
+        style={styles.list}
+        ListEmptyComponent={
+          reservations ? <EmptyState text="아직 들어온 예약이 없어요." /> : null
+        }
+        renderItem={({ item }) => (
+          <Card
+            onPress={() => router.push(`/company/reservations/${item.id}`)}
+            style={styles.card}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.customerName}>{item.customerName}</Text>
+              <Badge label={STATUS_LABEL[item.status]} />
+            </View>
+            <Text style={styles.meta}>
+              {item.categoryName}
+              {item.price ? ` · ${item.price.toLocaleString()}원` : ""}
+            </Text>
+            <Text style={styles.meta}>
+              {new Date(item.desiredDate).toLocaleDateString("ko-KR")} {item.desiredTime}
+            </Text>
 
-              {item.status === "REQUESTED" && (
-                <View style={styles.actions}>
-                  <Pressable
-                    style={styles.acceptButton}
-                    onPress={() => handleAction(item.id, "accept")}
-                    disabled={busyId === item.id}
-                  >
-                    <Text style={styles.acceptButtonText}>승인</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.rejectButton}
-                    onPress={() => handleAction(item.id, "reject")}
-                    disabled={busyId === item.id}
-                  >
-                    <Text style={styles.rejectButtonText}>거절</Text>
-                  </Pressable>
-                </View>
-              )}
-              {item.status === "ACCEPTED" && (
-                <View style={styles.actions}>
-                  <Pressable
-                    style={styles.completeButton}
-                    onPress={() => handleAction(item.id, "complete")}
-                    disabled={busyId === item.id}
-                  >
-                    <Text style={styles.completeButtonText}>청소 완료 처리</Text>
-                  </Pressable>
-                </View>
-              )}
-            </Pressable>
-          )}
-        />
-      )}
-    </View>
+            {item.status === "REQUESTED" && (
+              <View style={styles.actions}>
+                <Button
+                  title="승인"
+                  size="sm"
+                  onPress={() => handleAction(item.id, "accept")}
+                  loading={busyId === item.id}
+                />
+                <Button
+                  title="거절"
+                  size="sm"
+                  variant="danger"
+                  onPress={() => handleAction(item.id, "reject")}
+                  disabled={busyId === item.id}
+                />
+              </View>
+            )}
+            {item.status === "ACCEPTED" && (
+              <View style={styles.actions}>
+                <Button
+                  title="청소 완료 처리"
+                  size="sm"
+                  variant="outline"
+                  onPress={() => handleAction(item.id, "complete")}
+                  loading={busyId === item.id}
+                />
+              </View>
+            )}
+          </Card>
+        )}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 18, fontWeight: "700" },
-  filterRow: { flexDirection: "row", gap: 8, marginTop: 12 },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  filterRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
   filterChip: {
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm - 2,
   },
-  filterChipActive: { backgroundColor: "#171717", borderColor: "#171717" },
-  filterChipText: { fontSize: 12, fontWeight: "500", color: "#525252" },
-  filterChipTextActive: { color: "#ffffff" },
-  list: { marginTop: 16 },
-  empty: { marginTop: 40, textAlign: "center", fontSize: 13, color: "#a3a3a3" },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 14,
-    marginBottom: 10,
-  },
+  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: "#525252" },
+  filterChipTextActive: { color: colors.onPrimary },
+  list: { marginTop: spacing.lg },
+  card: { marginBottom: spacing.sm + 2 },
   cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  customerName: { fontSize: 15, fontWeight: "700" },
-  statusBadge: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#525252",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  meta: { marginTop: 4, fontSize: 12, color: "#737373" },
-  actions: { flexDirection: "row", gap: 8, marginTop: 10 },
-  acceptButton: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: "#171717" },
-  acceptButtonText: { color: "#ffffff", fontSize: 12, fontWeight: "600" },
-  rejectButton: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: "#fca5a5",
-  },
-  rejectButtonText: { color: "#dc2626", fontSize: 12, fontWeight: "600" },
-  completeButton: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: "#171717",
-  },
-  completeButtonText: { fontSize: 12, fontWeight: "600" },
+  customerName: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
+  meta: { marginTop: spacing.xs, fontSize: fontSize.sm, color: colors.textMuted },
+  actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
 });

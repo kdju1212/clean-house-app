@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  SectionList,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, SectionList, StyleSheet, Text } from "react-native";
 import { router } from "expo-router";
 import { fetchRegionTree, type RegionLeaf, type RegionTreeResponse } from "../src/api/regions";
 import { saveSelectedRegion } from "../src/storage/auth-storage";
+import { Screen } from "../src/components/Screen";
+import { LoadingView } from "../src/components/LoadingView";
+import { colors, fontSize, fontWeight, radius, spacing } from "../src/theme";
 
 type Section = { title: string; data: RegionLeaf[] };
 
@@ -47,15 +43,11 @@ export default function RegionSelectScreen() {
   }
 
   if (!sections) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <Text style={styles.title}>지역 선택</Text>
       <Text style={styles.subtitle}>동네를 선택하면 해당 지역 업체를 보여드려요</Text>
 
@@ -66,40 +58,34 @@ export default function RegionSelectScreen() {
           <Text style={styles.sectionHeader}>{section.title}</Text>
         )}
         renderItem={({ item }) => (
-          <Pressable
-            style={styles.item}
-            onPress={() => handleSelect(item)}
-            disabled={saving}
-          >
+          <Pressable style={styles.item} onPress={() => handleSelect(item)} disabled={saving}>
             <Text style={styles.itemText}>{item.name}</Text>
           </Pressable>
         )}
         style={styles.list}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 20, fontWeight: "700" },
-  subtitle: { marginTop: 4, fontSize: 13, color: "#737373" },
-  list: { marginTop: 16 },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  subtitle: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.textMuted },
+  list: { marginTop: spacing.lg },
   sectionHeader: {
-    marginTop: 12,
-    marginBottom: 6,
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#a3a3a3",
+    marginTop: spacing.md,
+    marginBottom: spacing.xs + 2,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textFaint,
   },
   item: {
-    borderRadius: 12,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 8,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md + 2,
+    marginBottom: spacing.sm,
   },
-  itemText: { fontSize: 14, fontWeight: "500" },
+  itemText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.text },
 });

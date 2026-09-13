@@ -10,8 +10,10 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchMessages, sendMessage, type ChatMessage } from "../../../src/api/chat";
 import { getStoredUser } from "../../../src/storage/auth-storage";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
 
 // Simple polling instead of a websocket/SSE connection — fine for the MVP's
 // traffic level, and keeps the app from needing a persistent connection or
@@ -20,6 +22,7 @@ const POLL_INTERVAL_MS = 4000;
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -65,7 +68,7 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top + spacing.lg }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <FlatList
@@ -88,12 +91,13 @@ export default function ChatScreen() {
         }}
       />
 
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, { paddingBottom: insets.bottom + spacing.sm }]}>
         <TextInput
           style={styles.input}
           value={draft}
           onChangeText={setDraft}
           placeholder="메시지를 입력하세요"
+          placeholderTextColor={colors.textFaint}
           multiline
         />
         <Pressable style={styles.sendButton} onPress={handleSend} disabled={sending}>
@@ -105,39 +109,45 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56 },
-  list: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm },
   bubbleRow: { flexDirection: "row" },
   bubbleRowMine: { justifyContent: "flex-end" },
-  bubble: { maxWidth: "75%", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
-  bubbleMine: { backgroundColor: "#171717" },
-  bubbleTheirs: { backgroundColor: "#f5f5f5" },
-  bubbleTextMine: { color: "#ffffff", fontSize: 14 },
-  bubbleTextTheirs: { color: "#171717", fontSize: 14 },
+  bubble: {
+    maxWidth: "75%",
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  bubbleMine: { backgroundColor: colors.primary },
+  bubbleTheirs: { backgroundColor: colors.surfaceMuted },
+  bubbleTextMine: { color: colors.onPrimary, fontSize: fontSize.md },
+  bubbleTextTheirs: { color: colors.text, fontSize: fontSize.md },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm + 2,
     borderTopWidth: 1,
-    borderTopColor: "#e5e5e5",
+    borderTopColor: colors.border,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm,
     maxHeight: 100,
-    fontSize: 14,
+    fontSize: fontSize.md,
+    color: colors.text,
   },
   sendButton: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "#171717",
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    backgroundColor: colors.primary,
   },
-  sendButtonText: { color: "#ffffff", fontSize: 13, fontWeight: "600" },
+  sendButtonText: { color: colors.onPrimary, fontSize: fontSize.base, fontWeight: fontWeight.semibold },
 });

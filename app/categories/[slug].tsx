@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { searchCompanies, type CompanyRow } from "../../src/api/companies";
 import { getSelectedRegion } from "../../src/storage/auth-storage";
+import { Screen } from "../../src/components/Screen";
+import { LoadingView } from "../../src/components/LoadingView";
+import { EmptyState } from "../../src/components/EmptyState";
+import { Badge } from "../../src/components/Badge";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 type Row = CompanyRow & { isAd?: boolean };
 
@@ -58,24 +55,18 @@ export default function CategoryCompaniesScreen() {
   }
 
   if (!rows) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <Text style={styles.breadcrumb}>
         {regionName} &gt; {categoryName}
       </Text>
       <Text style={styles.title}>{categoryName} 업체</Text>
 
       {rows.length === 0 ? (
-        <Text style={styles.empty}>
-          아직 {regionName}에 등록된 {categoryName} 업체가 없어요.
-        </Text>
+        <EmptyState text={`아직 ${regionName}에 등록된 ${categoryName} 업체가 없어요.`} />
       ) : (
         <FlatList
           data={rows}
@@ -91,7 +82,7 @@ export default function CategoryCompaniesScreen() {
               <View style={styles.cardBody}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardName}>{item.name}</Text>
-                  {item.isAd && <Text style={styles.adBadge}>광고</Text>}
+                  {item.isAd && <Badge label="광고" tone="warning" />}
                 </View>
                 <Text style={styles.cardIntro} numberOfLines={1}>
                   {item.introText ?? ""}
@@ -107,40 +98,28 @@ export default function CategoryCompaniesScreen() {
           )}
         />
       )}
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  breadcrumb: { fontSize: 12, color: "#a3a3a3" },
-  title: { marginTop: 4, fontSize: 18, fontWeight: "700" },
-  empty: { marginTop: 40, textAlign: "center", fontSize: 13, color: "#a3a3a3" },
-  list: { marginTop: 16 },
+  breadcrumb: { fontSize: fontSize.sm, color: colors.textFaint },
+  title: { marginTop: spacing.xs, fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  list: { marginTop: spacing.lg },
   card: {
     flexDirection: "row",
-    gap: 12,
-    borderRadius: 14,
+    gap: spacing.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 12,
-    marginBottom: 10,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.sm + 2,
   },
-  thumb: { width: 64, height: 64, borderRadius: 10 },
-  thumbPlaceholder: { backgroundColor: "#f5f5f5" },
+  thumb: { width: 64, height: 64, borderRadius: radius.md },
+  thumbPlaceholder: { backgroundColor: colors.surfaceMuted },
   cardBody: { flex: 1, justifyContent: "center" },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  cardName: { fontSize: 14, fontWeight: "600" },
-  adBadge: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#a16207",
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  cardIntro: { marginTop: 2, fontSize: 12, color: "#737373" },
-  cardMeta: { marginTop: 4, fontSize: 12, color: "#525252" },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm - 2 },
+  cardName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
+  cardIntro: { marginTop: 2, fontSize: fontSize.sm, color: colors.textMuted },
+  cardMeta: { marginTop: spacing.xs, fontSize: fontSize.sm, color: "#525252" },
 });

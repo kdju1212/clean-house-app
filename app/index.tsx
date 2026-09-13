@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
 import { getStoredToken, getStoredUser, getSelectedRegion } from "../src/storage/auth-storage";
+import { LoadingView } from "../src/components/LoadingView";
 
 type Destination = "loading" | "/login" | "/region-select" | "/categories" | "/company";
 
@@ -34,11 +34,7 @@ export default function Index() {
   }, []);
 
   if (destination === "loading") {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return <Redirect href={destination} />;

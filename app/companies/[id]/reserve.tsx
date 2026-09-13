@@ -1,17 +1,12 @@
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { createReservation } from "../../../src/api/reservations";
 import { getSelectedRegion } from "../../../src/storage/auth-storage";
+import { Screen } from "../../../src/components/Screen";
+import { Button } from "../../../src/components/Button";
+import { TextField } from "../../../src/components/TextField";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
 
 const TIME_SLOTS = [
   "09:00",
@@ -84,39 +79,25 @@ export default function ReserveScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <Screen scroll>
       <Text style={styles.title}>{params.name}</Text>
       <Text style={styles.subtitle}>예약 신청</Text>
 
-      <Text style={styles.label}>이름</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="이름" />
+      <TextField label="이름" value={name} onChangeText={setName} placeholder="이름" />
 
-      <Text style={styles.label}>연락처</Text>
-      <TextInput
-        style={styles.input}
+      <TextField
+        label="연락처"
         value={phone}
         onChangeText={setPhone}
         placeholder="01012345678"
         keyboardType="phone-pad"
       />
 
-      <Text style={styles.label}>서비스 주소</Text>
-      <TextInput
-        style={styles.input}
-        value={address}
-        onChangeText={setAddress}
-        placeholder="주소"
-      />
-      <TextInput
-        style={styles.input}
-        value={addressDetail}
-        onChangeText={setAddressDetail}
-        placeholder="상세 주소 (선택)"
-      />
+      <TextField label="서비스 주소" value={address} onChangeText={setAddress} placeholder="주소" />
+      <TextField value={addressDetail} onChangeText={setAddressDetail} placeholder="상세 주소 (선택)" />
 
-      <Text style={styles.label}>희망 날짜 (YYYY-MM-DD)</Text>
-      <TextInput
-        style={styles.input}
+      <TextField
+        label="희망 날짜 (YYYY-MM-DD)"
         value={desiredDate}
         onChangeText={setDesiredDate}
         placeholder="2026-01-15"
@@ -142,64 +123,44 @@ export default function ReserveScreen() {
         ))}
       </View>
 
-      <Text style={styles.label}>요청사항 (선택)</Text>
-      <TextInput
-        style={[styles.input, styles.multiline]}
+      <TextField
+        label="요청사항 (선택)"
         value={requestNote}
         onChangeText={setRequestNote}
         placeholder="전달하고 싶은 내용을 적어주세요"
         multiline
       />
 
-      <Pressable
-        style={[styles.submitButton, submitting && styles.disabled]}
+      <Button
+        title="예약 신청하기"
         onPress={handleSubmit}
-        disabled={submitting}
-      >
-        {submitting ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.submitButtonText}>예약 신청하기</Text>
-        )}
-      </Pressable>
-    </ScrollView>
+        loading={submitting}
+        style={styles.submitButton}
+      />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
-  content: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 40 },
-  title: { fontSize: 18, fontWeight: "700" },
-  subtitle: { marginTop: 2, fontSize: 13, color: "#737373" },
-  label: { marginTop: 16, marginBottom: 6, fontSize: 13, fontWeight: "600" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    marginBottom: 8,
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  subtitle: { marginTop: 2, fontSize: fontSize.base, color: colors.textMuted },
+  label: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xs + 2,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textMuted,
   },
-  multiline: { minHeight: 80, textAlignVertical: "top" },
-  timeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  timeGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   timeChip: {
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm - 2,
   },
-  timeChipSelected: { backgroundColor: "#171717", borderColor: "#171717" },
-  timeChipText: { fontSize: 13, color: "#404040" },
-  timeChipTextSelected: { color: "#ffffff" },
-  submitButton: {
-    marginTop: 28,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: "#171717",
-  },
-  disabled: { opacity: 0.6 },
-  submitButtonText: { fontSize: 15, fontWeight: "600", color: "#ffffff" },
+  timeChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  timeChipText: { fontSize: fontSize.base, color: "#404040" },
+  timeChipTextSelected: { color: colors.onPrimary },
+  submitButton: { marginTop: spacing.xxl + spacing.xs },
 });

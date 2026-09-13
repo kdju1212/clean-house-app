@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { login as kakaoLogin } from "@react-native-seoul/kakao-login";
 import { loginWithKakao } from "../src/api/auth";
+import { Button } from "../src/components/Button";
+import { colors, fontSize, fontWeight, spacing } from "../src/theme";
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
@@ -32,17 +34,13 @@ export default function LoginScreen() {
       <Text style={styles.title}>우리동네 청소업체</Text>
       <Text style={styles.subtitle}>지역 청소업체를 찾고 바로 예약해보세요</Text>
 
-      <Pressable
-        style={[styles.kakaoButton, loading && styles.disabled]}
+      <Button
+        title="카카오로 로그인"
         onPress={handleKakaoLogin}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#000000" />
-        ) : (
-          <Text style={styles.kakaoButtonText}>카카오로 로그인</Text>
-        )}
-      </Pressable>
+        loading={loading}
+        variant="kakao"
+        style={styles.kakaoButton}
+      />
     </View>
   );
 }
@@ -52,33 +50,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#ffffff",
+    paddingHorizontal: spacing.xxl,
+    backgroundColor: colors.bg,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-  },
+  title: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text },
   subtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    color: "#737373",
+    marginTop: spacing.sm,
+    fontSize: fontSize.md,
+    color: colors.textMuted,
     textAlign: "center",
   },
-  kakaoButton: {
-    marginTop: 40,
-    width: "100%",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: "#FEE500",
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  kakaoButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#000000",
-  },
+  kakaoButton: { marginTop: spacing.xxxl + spacing.sm, width: "100%" },
 });

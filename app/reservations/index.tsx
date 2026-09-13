@@ -2,6 +2,11 @@ import { useCallback, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchMyReservations, type MyReservation } from "../../src/api/reservations";
+import { Screen } from "../../src/components/Screen";
+import { Card } from "../../src/components/Card";
+import { Badge } from "../../src/components/Badge";
+import { EmptyState } from "../../src/components/EmptyState";
+import { colors, fontSize, fontWeight, spacing } from "../../src/theme";
 
 const STATUS_LABEL: Record<MyReservation["status"], string> = {
   REQUESTED: "예약 예정",
@@ -21,7 +26,7 @@ export default function MyReservationsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <Text style={styles.title}>내 예약</Text>
 
       <FlatList
@@ -29,13 +34,13 @@ export default function MyReservationsScreen() {
         keyExtractor={(item) => item.id}
         style={styles.list}
         ListEmptyComponent={
-          reservations ? <Text style={styles.empty}>아직 예약 내역이 없어요.</Text> : null
+          reservations ? <EmptyState text="아직 예약 내역이 없어요." /> : null
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <Card style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.companyName}>{item.companyName}</Text>
-              <Text style={styles.statusBadge}>{STATUS_LABEL[item.status]}</Text>
+              <Badge label={STATUS_LABEL[item.status]} />
             </View>
             <Text style={styles.meta}>
               {item.categoryName}
@@ -58,38 +63,26 @@ export default function MyReservationsScreen() {
                   </Pressable>
                 ))}
             </View>
-          </View>
+          </Card>
         )}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  title: { fontSize: 18, fontWeight: "700" },
-  list: { marginTop: 16 },
-  empty: { marginTop: 40, textAlign: "center", fontSize: 13, color: "#a3a3a3" },
-  card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 14,
-    marginBottom: 10,
-  },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  list: { marginTop: spacing.lg },
+  card: { marginBottom: spacing.sm + 2 },
   cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  companyName: { fontSize: 15, fontWeight: "700" },
-  statusBadge: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#525252",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
+  companyName: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
+  meta: { marginTop: spacing.xs, fontSize: fontSize.sm, color: colors.textMuted },
+  actions: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.md },
+  actionLink: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    textDecorationLine: "underline",
   },
-  meta: { marginTop: 4, fontSize: 12, color: "#737373" },
-  actions: { flexDirection: "row", gap: 16, marginTop: 10 },
-  actionLink: { fontSize: 12, fontWeight: "600", color: "#171717", textDecorationLine: "underline" },
-  actionDone: { fontSize: 12, color: "#a3a3a3" },
+  actionDone: { fontSize: fontSize.sm, color: colors.textFaint },
 });

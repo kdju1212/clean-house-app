@@ -1,18 +1,13 @@
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { getInfoAsync } from "expo-file-system";
 import { submitReview, uploadReviewPhoto } from "../../../src/api/reviews";
+import { Screen } from "../../../src/components/Screen";
+import { Button } from "../../../src/components/Button";
+import { TextField } from "../../../src/components/TextField";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
 
 export default function ReviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,7 +67,7 @@ export default function ReviewScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <Screen scroll>
       <Text style={styles.title}>리뷰 작성</Text>
 
       <View style={styles.stars}>
@@ -83,8 +78,7 @@ export default function ReviewScreen() {
         ))}
       </View>
 
-      <TextInput
-        style={styles.textarea}
+      <TextField
         value={content}
         onChangeText={setContent}
         placeholder="어떤 점이 좋았는지, 아쉬웠는지 알려주세요."
@@ -98,54 +92,25 @@ export default function ReviewScreen() {
       </Pressable>
       {photoUri && <Image source={{ uri: photoUri }} style={styles.preview} />}
 
-      <Pressable
-        style={[styles.submitButton, submitting && styles.disabled]}
-        onPress={handleSubmit}
-        disabled={submitting}
-      >
-        {submitting ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text style={styles.submitButtonText}>리뷰 등록</Text>
-        )}
-      </Pressable>
-    </View>
+      <Button title="리뷰 등록" onPress={handleSubmit} loading={submitting} style={styles.submitButton} />
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  title: { fontSize: 18, fontWeight: "700" },
-  stars: { flexDirection: "row", gap: 4, marginTop: 16 },
-  star: { fontSize: 30, color: "#f59e0b" },
-  textarea: {
-    marginTop: 16,
-    minHeight: 100,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    textAlignVertical: "top",
-  },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  stars: { flexDirection: "row", gap: spacing.xs, marginTop: spacing.lg },
+  star: { fontSize: 30, color: colors.star },
   photoButton: {
-    marginTop: 12,
+    marginTop: spacing.md,
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.sm,
   },
-  photoButtonText: { fontSize: 13, fontWeight: "500" },
-  preview: { marginTop: 12, width: 100, height: 100, borderRadius: 10 },
-  submitButton: {
-    marginTop: 24,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: "#171717",
-  },
-  disabled: { opacity: 0.6 },
-  submitButtonText: { fontSize: 15, fontWeight: "600", color: "#ffffff" },
+  photoButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
+  preview: { marginTop: spacing.md, width: 100, height: 100, borderRadius: radius.md },
+  submitButton: { marginTop: spacing.xxl },
 });

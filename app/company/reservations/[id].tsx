@@ -1,11 +1,17 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   fetchCompanyReservationDetail,
   transitionReservation,
   type CompanyReservationDetail,
 } from "../../../src/api/company";
+import { Screen } from "../../../src/components/Screen";
+import { LoadingView } from "../../../src/components/LoadingView";
+import { Card } from "../../../src/components/Card";
+import { Badge } from "../../../src/components/Badge";
+import { Button } from "../../../src/components/Button";
+import { colors, fontSize, fontWeight, spacing } from "../../../src/theme";
 
 const STATUS_LABEL: Record<CompanyReservationDetail["status"], string> = {
   REQUESTED: "예약 신청",
@@ -41,21 +47,17 @@ export default function CompanyReservationDetailScreen() {
   }
 
   if (!reservation) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <View style={styles.header}>
         <Text style={styles.title}>예약 상세</Text>
-        <Text style={styles.statusBadge}>{STATUS_LABEL[reservation.status]}</Text>
+        <Badge label={STATUS_LABEL[reservation.status]} />
       </View>
 
-      <View style={styles.card}>
+      <Card style={styles.card}>
         <Row label="고객" value={reservation.customerName} />
         <Row label="연락처" value={reservation.customerPhone} />
         <Row label="서비스" value={reservation.categoryName} />
@@ -76,45 +78,36 @@ export default function CompanyReservationDetailScreen() {
             <Text style={styles.noteText}>{reservation.requestNote}</Text>
           </View>
         )}
-      </View>
+      </Card>
 
       <View style={styles.actions}>
-        <Pressable
-          style={styles.chatButton}
+        <Button
+          title="채팅하기"
+          variant="outline"
           onPress={() => router.push(`/reservations/${reservation.id}/chat`)}
-        >
-          <Text style={styles.chatButtonText}>채팅하기</Text>
-        </Pressable>
+        />
 
         {reservation.status === "REQUESTED" && (
           <>
-            <Pressable
-              style={styles.acceptButton}
-              onPress={() => handleAction("accept")}
-              disabled={busy}
-            >
-              <Text style={styles.acceptButtonText}>승인</Text>
-            </Pressable>
-            <Pressable
-              style={styles.rejectButton}
+            <Button title="승인" onPress={() => handleAction("accept")} loading={busy} />
+            <Button
+              title="거절"
+              variant="danger"
               onPress={() => handleAction("reject")}
               disabled={busy}
-            >
-              <Text style={styles.rejectButtonText}>거절</Text>
-            </Pressable>
+            />
           </>
         )}
         {reservation.status === "ACCEPTED" && (
-          <Pressable
-            style={styles.rejectButton}
+          <Button
+            title="청소 완료 처리"
+            variant="danger"
             onPress={() => handleAction("complete")}
             disabled={busy}
-          >
-            <Text style={styles.rejectButtonText}>청소 완료 처리</Text>
-          </Pressable>
+          />
         )}
       </View>
-    </View>
+    </Screen>
   );
 }
 
@@ -128,49 +121,13 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  title: { fontSize: 18, fontWeight: "700" },
-  statusBadge: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#525252",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  card: {
-    marginTop: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 16,
-    gap: 10,
-  },
-  row: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  rowLabel: { fontSize: 13, color: "#737373" },
-  rowValue: { fontSize: 13, fontWeight: "500", textAlign: "right", flexShrink: 1 },
-  noteBlock: { borderTopWidth: 1, borderTopColor: "#f5f5f5", paddingTop: 10, gap: 4 },
-  noteText: { fontSize: 13 },
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 },
-  chatButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#171717",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  chatButtonText: { fontSize: 13, fontWeight: "600" },
-  acceptButton: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#171717" },
-  acceptButtonText: { color: "#ffffff", fontSize: 13, fontWeight: "600" },
-  rejectButton: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#fca5a5",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  rejectButtonText: { color: "#dc2626", fontSize: 13, fontWeight: "600" },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  card: { marginTop: spacing.lg, gap: spacing.sm + 2 },
+  row: { flexDirection: "row", justifyContent: "space-between", gap: spacing.md },
+  rowLabel: { fontSize: fontSize.base, color: colors.textMuted },
+  rowValue: { fontSize: fontSize.base, fontWeight: fontWeight.medium, textAlign: "right", flexShrink: 1, color: colors.text },
+  noteBlock: { borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: spacing.sm + 2, gap: spacing.xs },
+  noteText: { fontSize: fontSize.base, color: colors.text },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.lg },
 });

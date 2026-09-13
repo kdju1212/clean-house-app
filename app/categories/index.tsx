@@ -1,9 +1,12 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { getSelectedRegion, type StoredRegion } from "../../src/storage/auth-storage";
 import { logout } from "../../src/api/auth";
+import { Screen } from "../../src/components/Screen";
+import { LoadingView } from "../../src/components/LoadingView";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 const EMOJI_BY_SLUG: Record<string, string> = {
   "move-in": "🏠",
@@ -54,15 +57,11 @@ export default function CategoriesScreen() {
   }
 
   if (!region || !categories) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>어떤 청소가 필요하세요?</Text>
@@ -92,35 +91,38 @@ export default function CategoriesScreen() {
           </Pressable>
         ))}
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
-  title: { fontSize: 18, fontWeight: "700" },
-  regionLink: { marginTop: 6, fontSize: 13, color: "#525252", textDecorationLine: "underline" },
-  headerActions: { alignItems: "flex-end", gap: 8 },
-  myReservations: { fontSize: 12, fontWeight: "600", color: "#171717" },
-  logout: { fontSize: 12, color: "#a3a3a3" },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  regionLink: {
+    marginTop: spacing.xs + 2,
+    fontSize: fontSize.base,
+    color: "#525252",
+    textDecorationLine: "underline",
+  },
+  headerActions: { alignItems: "flex-end", gap: spacing.sm },
+  myReservations: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
+  logout: { fontSize: fontSize.sm, color: colors.textFaint },
   grid: {
-    marginTop: 20,
+    marginTop: spacing.xl,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: spacing.md,
   },
   card: {
     width: "30%",
     aspectRatio: 1,
-    borderRadius: 16,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: spacing.sm,
   },
   emoji: { fontSize: 24 },
-  cardText: { fontSize: 13, fontWeight: "500" },
+  cardText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
 });

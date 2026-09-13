@@ -1,16 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { getInfoAsync } from "expo-file-system";
@@ -26,6 +15,11 @@ import {
 } from "../../src/api/company";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { fetchRegionTree, type RegionSido, type RegionLeaf } from "../../src/api/regions";
+import { Screen } from "../../src/components/Screen";
+import { LoadingView } from "../../src/components/LoadingView";
+import { Button } from "../../src/components/Button";
+import { TextField } from "../../src/components/TextField";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 const PHOTO_TYPE_LABEL: Record<string, string> = {
   MAIN: "대표",
@@ -57,15 +51,11 @@ export default function CompanyProfileScreen() {
   );
 
   if (!data || !categories || !sidoTree || !legacyRegions) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <Screen scroll>
       <Text style={styles.title}>업체 프로필 관리</Text>
 
       <ProfileSection company={data.company} onSaved={load} />
@@ -77,7 +67,7 @@ export default function CompanyProfileScreen() {
         onSaved={load}
       />
       <PhotosSection photos={data.photos} mainImageUrl={data.company.mainImageUrl} onChanged={load} />
-    </ScrollView>
+    </Screen>
   );
 }
 
@@ -110,23 +100,11 @@ function ProfileSection({
 
   return (
     <Section title="기본 정보">
-      <FieldLabel>업체명</FieldLabel>
-      <TextInput style={styles.input} value={name} onChangeText={setName} />
-
-      <FieldLabel>연락처</FieldLabel>
-      <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-
-      <FieldLabel>업체 소개</FieldLabel>
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        value={introText}
-        onChangeText={setIntroText}
-        multiline
-      />
-
-      <FieldLabel>영업시간</FieldLabel>
-      <TextInput
-        style={styles.input}
+      <TextField label="업체명" value={name} onChangeText={setName} />
+      <TextField label="연락처" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+      <TextField label="업체 소개" value={introText} onChangeText={setIntroText} multiline />
+      <TextField
+        label="영업시간"
         value={businessHours}
         onChangeText={setBusinessHours}
         placeholder="예: 09:00-18:00"
@@ -137,9 +115,7 @@ function ProfileSection({
         <Switch value={isAvailable} onValueChange={setIsAvailable} />
       </View>
 
-      <Pressable style={[styles.saveButton, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
-        {saving ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.saveButtonText}>저장</Text>}
-      </Pressable>
+      <Button title="저장" onPress={handleSave} loading={saving} style={styles.saveButton} />
     </Section>
   );
 }
@@ -216,22 +192,14 @@ function ServicesSection({
               </Pressable>
             ))}
           </View>
-          <TextInput
-            style={styles.input}
+          <TextField
             value={price}
             onChangeText={setPrice}
             placeholder="가격 (원)"
             keyboardType="number-pad"
           />
-          <TextInput
-            style={styles.input}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="설명 (선택)"
-          />
-          <Pressable style={[styles.saveButton, saving && styles.disabled]} onPress={handleAdd} disabled={saving}>
-            <Text style={styles.saveButtonText}>서비스 추가</Text>
-          </Pressable>
+          <TextField value={description} onChangeText={setDescription} placeholder="설명 (선택)" />
+          <Button title="서비스 추가" onPress={handleAdd} loading={saving} style={styles.saveButton} />
         </View>
       )}
     </Section>
@@ -346,9 +314,7 @@ function RegionsSection({
         </View>
       )}
 
-      <Pressable style={[styles.saveButton, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
-        {saving ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.saveButtonText}>저장</Text>}
-      </Pressable>
+      <Button title="저장" onPress={handleSave} loading={saving} style={styles.saveButton} />
     </Section>
   );
 }
@@ -432,9 +398,7 @@ function PhotosSection({
         대표: 목록에 보이는 사진 · 작업사진: 상세페이지 하단 · 전/후 비교: 별도 섹션
       </Text>
 
-      <Pressable style={[styles.saveButton, uploading && styles.disabled]} onPress={handlePick} disabled={uploading}>
-        {uploading ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.saveButtonText}>사진 추가</Text>}
-      </Pressable>
+      <Button title="사진 추가" onPress={handlePick} loading={uploading} style={styles.saveButton} />
     </Section>
   );
 }
@@ -448,89 +412,64 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.fieldLabel}>{children}</Text>;
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 60 },
-  title: { fontSize: 18, fontWeight: "700" },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   section: {
-    marginTop: 20,
-    borderRadius: 16,
+    marginTop: spacing.xl,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 16,
+    borderColor: colors.border,
+    padding: spacing.lg,
   },
-  sectionTitle: { fontSize: 14, fontWeight: "700" },
-  fieldLabel: { marginTop: 12, marginBottom: 6, fontSize: 12, fontWeight: "600", color: "#525252" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 14,
-  },
-  multiline: { minHeight: 70, textAlignVertical: "top" },
+  sectionTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text },
   switchRow: {
-    marginTop: 14,
+    marginTop: spacing.md + 2,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  switchLabel: { fontSize: 13, fontWeight: "500" },
-  saveButton: {
-    marginTop: 16,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: "#171717",
-  },
-  disabled: { opacity: 0.6 },
-  saveButtonText: { color: "#ffffff", fontSize: 13, fontWeight: "600" },
+  switchLabel: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
+  saveButton: { marginTop: spacing.lg },
   listRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#f0f0f0",
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 8,
+    borderColor: colors.borderLight,
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+    marginTop: spacing.sm,
   },
-  listRowTitle: { fontSize: 13, fontWeight: "600" },
-  listRowMeta: { marginTop: 2, fontSize: 12, color: "#737373" },
-  deleteLink: { fontSize: 12, color: "#a3a3a3", textDecorationLine: "underline" },
-  addForm: { marginTop: 14, borderTopWidth: 1, borderTopColor: "#f0f0f0", paddingTop: 14 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
+  listRowTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  listRowMeta: { marginTop: 2, fontSize: fontSize.sm, color: colors.textMuted },
+  deleteLink: { fontSize: fontSize.sm, color: colors.textFaint, textDecorationLine: "underline" },
+  addForm: { marginTop: spacing.md + 2, borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: spacing.md + 2 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs + 2, marginTop: spacing.xs + 2 },
   chip: {
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 1,
   },
-  chipActive: { backgroundColor: "#171717", borderColor: "#171717" },
-  chipText: { fontSize: 12, color: "#404040" },
-  chipTextActive: { color: "#ffffff" },
-  helperText: { marginTop: 6, fontSize: 11, color: "#a3a3a3" },
-  regionGroup: { marginTop: 12 },
-  regionGroupHeader: { paddingVertical: 4 },
-  regionGroupTitle: { fontSize: 13, fontWeight: "600" },
-  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: fontSize.sm, color: "#404040" },
+  chipTextActive: { color: colors.onPrimary },
+  helperText: { marginTop: spacing.xs + 2, fontSize: fontSize.xs, color: colors.textFaint },
+  regionGroup: { marginTop: spacing.md },
+  regionGroupHeader: { paddingVertical: spacing.xs },
+  regionGroupTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm + 2 },
   photoCell: { width: 90 },
-  photoImage: { width: 90, height: 90, borderRadius: 10 },
+  photoImage: { width: 90, height: 90, borderRadius: radius.md },
   mainBadge: {
     position: "absolute",
     left: 4,
     top: 4,
     backgroundColor: "rgba(23,23,23,0.8)",
-    borderRadius: 999,
-    paddingHorizontal: 6,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.xs + 2,
     paddingVertical: 2,
   },
-  mainBadgeText: { color: "#ffffff", fontSize: 9, fontWeight: "600" },
-  photoTypeLabel: { marginTop: 4, fontSize: 10, textAlign: "center", color: "#737373" },
+  mainBadgeText: { color: colors.onPrimary, fontSize: 9, fontWeight: fontWeight.semibold },
+  photoTypeLabel: { marginTop: spacing.xs, fontSize: 10, textAlign: "center", color: colors.textMuted },
 });

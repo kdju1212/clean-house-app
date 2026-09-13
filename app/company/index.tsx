@@ -1,9 +1,14 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchCompanyMe, type CompanyMe } from "../../src/api/company";
 import { logout } from "../../src/api/auth";
 import { ApiError } from "../../src/api/client";
+import { Screen } from "../../src/components/Screen";
+import { LoadingView } from "../../src/components/LoadingView";
+import { Card } from "../../src/components/Card";
+import { Badge } from "../../src/components/Badge";
+import { colors, fontSize, fontWeight, spacing } from "../../src/theme";
 
 const STATUS_LABEL: Record<CompanyMe["company"]["status"], string> = {
   PENDING: "심사중",
@@ -36,97 +41,62 @@ export default function CompanyDashboardScreen() {
   }
 
   if (state.status === "loading") {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   if (state.status === "no-company") {
     return (
-      <View style={styles.container}>
+      <Screen>
         <Text style={styles.title}>업체 관리</Text>
         <Text style={styles.emptyText}>
           아직 등록된 업체가 없어요. 웹에서 먼저 업체를 등록해주세요.
         </Text>
-        <Pressable onPress={handleLogout} style={{ marginTop: 24 }}>
+        <Pressable onPress={handleLogout} style={styles.logoutStandalone}>
           <Text style={styles.logout}>로그아웃</Text>
         </Pressable>
-      </View>
+      </Screen>
     );
   }
 
   const { company, requestedCount, averageRating, reviewCount } = state.data;
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <View style={styles.header}>
         <Text style={styles.title}>{company.name}</Text>
         <Pressable onPress={handleLogout}>
           <Text style={styles.logout}>로그아웃</Text>
         </Pressable>
       </View>
-      <Text style={styles.statusBadge}>{STATUS_LABEL[company.status]}</Text>
+      <Badge label={STATUS_LABEL[company.status]} style={styles.statusBadge} />
 
       <Text style={styles.ratingText}>
         {reviewCount > 0 ? `★ ${averageRating.toFixed(1)} · 리뷰 ${reviewCount}개` : "아직 리뷰가 없어요"}
       </Text>
 
-      <Pressable style={styles.card} onPress={() => router.push("/company/reservations")}>
-        <Text style={styles.cardTitle}>예약 관리</Text>
-        {requestedCount > 0 && (
-          <Text style={styles.cardBadge}>신규 {requestedCount}건</Text>
-        )}
-      </Pressable>
+      <Card onPress={() => router.push("/company/reservations")} style={styles.card}>
+        <View style={styles.cardRow}>
+          <Text style={styles.cardTitle}>예약 관리</Text>
+          {requestedCount > 0 && <Badge label={`신규 ${requestedCount}건`} tone="warning" />}
+        </View>
+      </Card>
 
-      <Pressable
-        style={[styles.card, { marginTop: 10 }]}
-        onPress={() => router.push("/company/profile")}
-      >
+      <Card onPress={() => router.push("/company/profile")} style={styles.card}>
         <Text style={styles.cardTitle}>프로필 관리</Text>
-      </Pressable>
-    </View>
+      </Card>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#ffffff", paddingTop: 56, paddingHorizontal: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  title: { fontSize: 18, fontWeight: "700" },
-  logout: { fontSize: 12, color: "#a3a3a3" },
-  statusBadge: {
-    marginTop: 6,
-    alignSelf: "flex-start",
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#525252",
-    backgroundColor: "#f5f5f5",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  ratingText: { marginTop: 10, fontSize: 13, color: "#737373" },
-  card: {
-    marginTop: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 16,
-  },
-  cardTitle: { fontSize: 15, fontWeight: "700" },
-  cardBadge: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#a16207",
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  emptyText: { marginTop: 12, fontSize: 13, color: "#737373" },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  logout: { fontSize: fontSize.sm, color: colors.textFaint },
+  logoutStandalone: { marginTop: spacing.xxl },
+  statusBadge: { marginTop: spacing.sm - 2 },
+  ratingText: { marginTop: spacing.md, fontSize: fontSize.base, color: colors.textMuted },
+  card: { marginTop: spacing.lg },
+  cardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cardTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
+  emptyText: { marginTop: spacing.md, fontSize: fontSize.base, color: colors.textMuted },
 });
