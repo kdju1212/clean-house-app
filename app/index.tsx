@@ -1,22 +1,32 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
-import { getStoredToken } from "../src/storage/auth-storage";
+import { getStoredToken, getSelectedRegion } from "../src/storage/auth-storage";
+
+type Destination = "loading" | "/login" | "/region-select" | "/categories";
 
 /**
- * Entry route: figures out whether there's already a saved session (from a
- * previous Kakao login) and redirects accordingly, before anything else
- * renders — same job the web's session cookie check does implicitly on
- * every page load.
+ * Entry route: figures out where to send the user before anything else
+ * renders — no session -> /login, session but no saved region -> pick one,
+ * otherwise straight to the category list. Same job the web's session
+ * cookie + REGION_COOKIE checks do implicitly on every page load.
  */
 export default function Index() {
-  const [status, setStatus] = useState<"loading" | "authed" | "guest">("loading");
+  const [destination, setDestination] = useState<Destination>("loading");
 
   useEffect(() => {
-    getStoredToken().then((token) => setStatus(token ? "authed" : "guest"));
+    (async () => {
+      const token = await getStoredToken();
+      if (!token) {
+        setDestination("/login");
+        return;
+      }
+      const region = await getSelectedRegion();
+      setDestination(region ? "/categories" : "/region-select");
+    })();
   }, []);
 
-  if (status === "loading") {
+  if (destination === "loading") {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />
@@ -24,5 +34,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={status === "authed" ? "/home" : "/login"} />;
+  return <Redirect href={destination} />;
 }

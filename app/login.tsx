@@ -16,7 +16,7 @@ export default function LoginScreen() {
       // native module.
       const { accessToken } = await kakaoLogin();
       await loginWithKakao(accessToken);
-      router.replace("/home");
+      router.replace("/region-select");
     } catch (err) {
       Alert.alert(
         "로그인 실패",
