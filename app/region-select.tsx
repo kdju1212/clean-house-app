@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SectionList, StyleSheet, Text, TextInput } from "react-native";
+import { Pressable, SectionList, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
-import { fetchRegionTree, type RegionLeaf, type RegionTreeResponse } from "../src/api/regions";
+import * as Location from "expo-location";
+import {
+  fetchRegionByCoords,
+  fetchRegionTree,
+  type RegionLeaf,
+  type RegionTreeResponse,
+} from "../src/api/regions";
 import { saveSelectedRegion } from "../src/storage/auth-storage";
 import { Screen } from "../src/components/Screen";
 import { LoadingView } from "../src/components/LoadingView";
@@ -55,6 +61,8 @@ export default function RegionSelectScreen() {
   const [tree, setTree] = useState<RegionTreeResponse | null>(null);
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRegionTree().then(setTree);
@@ -81,6 +89,25 @@ export default function RegionSelectScreen() {
     router.replace("/categories");
   }
 
+  async function handleLocate() {
+    setLocateError(null);
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocateError("위치 권한을 허용해주세요.");
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const region = await fetchRegionByCoords(position.coords.latitude, position.coords.longitude);
+      await handleSelect(region);
+    } catch (err) {
+      setLocateError(err instanceof Error ? err.message : "위치로 지역을 찾지 못했어요.");
+    } finally {
+      setLocating(false);
+    }
+  }
+
   if (!sections) {
     return <LoadingView />;
   }
@@ -90,15 +117,21 @@ export default function RegionSelectScreen() {
       <Text style={styles.title}>지역 선택</Text>
       <Text style={styles.subtitle}>동네를 선택하면 해당 지역 업체를 보여드려요</Text>
 
-      <TextInput
-        style={styles.searchInput}
-        value={query}
-        onChangeText={setQuery}
-        placeholder="동네 이름으로 검색 (예: 영통동)"
-        placeholderTextColor={colors.textFaint}
-        autoCorrect={false}
-        autoCapitalize="none"
-      />
+      <View style={styles.searchRow}>
+        <TextInput
+          style={[styles.searchInput, styles.searchInputFlex]}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="동네 이름으로 검색 (예: 영통동)"
+          placeholderTextColor={colors.textFaint}
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+        <Pressable style={styles.locateButton} onPress={handleLocate} disabled={locating}>
+          <Text style={styles.locateButtonText}>{locating ? "찾는 중..." : "내 위치로 찾기"}</Text>
+        </Pressable>
+      </View>
+      {locateError && <Text style={styles.errorText}>{locateError}</Text>}
 
       <SectionList
         sections={sections}
@@ -124,8 +157,8 @@ export default function RegionSelectScreen() {
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   subtitle: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.textMuted },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
   searchInput: {
-    marginTop: spacing.lg,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
@@ -134,6 +167,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.text,
   },
+  searchInputFlex: { flex: 1 },
+  locateButton: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+  },
+  locateButtonText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text },
+  errorText: { marginTop: spacing.xs, fontSize: fontSize.sm, color: "#dc2626" },
   list: { marginTop: spacing.lg },
   emptyText: {
     marginTop: spacing.lg,

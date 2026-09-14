@@ -12,3 +12,12 @@ export type RegionTreeResponse = {
 export async function fetchRegionTree(): Promise<RegionTreeResponse> {
   return apiFetch<RegionTreeResponse>("/api/mobile/regions", { auth: false });
 }
+
+export type RegionByCoords = RegionLeaf & { path: string };
+
+export async function fetchRegionByCoords(lat: number, lng: number): Promise<RegionByCoords> {
+  return apiFetch<RegionByCoords>(
+    `/api/mobile/regions/reverse-geocode?lat=${lat}&lng=${lng}`,
+    { auth: false }
+  );
+}
