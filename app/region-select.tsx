@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pressable, SectionList, StyleSheet, Text } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, SectionList, StyleSheet, Text, TextInput } from "react-native";
 import { router } from "expo-router";
 import { fetchRegionTree, type RegionLeaf, type RegionTreeResponse } from "../src/api/regions";
 import { saveSelectedRegion } from "../src/storage/auth-storage";
@@ -22,6 +22,29 @@ function toSections(tree: RegionTreeResponse): Section[] {
   return sections;
 }
 
+const normalize = (text: string) => text.trim().replace(/\s+/g, "");
+
+/**
+ * Full 시/도 시/군/구 동 path per leaf, for matching *and* for labelling
+ * search hits (a bare "청운동" is ambiguous nationwide — plenty of dong
+ * share a name across different cities) without changing what actually
+ * gets saved, which stays the plain dong name (see handleSelect).
+ */
+function toSearchIndex(tree: RegionTreeResponse): { region: RegionLeaf; path: string }[] {
+  const index: { region: RegionLeaf; path: string }[] = [];
+  for (const sido of tree.sido) {
+    for (const sigungu of sido.children) {
+      for (const dong of sigungu.children) {
+        index.push({ region: dong, path: `${sido.name} ${sigungu.name} ${dong.name}` });
+      }
+    }
+  }
+  for (const region of tree.legacyRegions) {
+    index.push({ region, path: region.name });
+  }
+  return index;
+}
+
 /**
  * The app has no REGION_COOKIE like the web does — the customer's pick here
  * is saved locally (see saveSelectedRegion) and sent explicitly as
@@ -29,16 +52,32 @@ function toSections(tree: RegionTreeResponse): Section[] {
  * server-side from a cookie.
  */
 export default function RegionSelectScreen() {
-  const [sections, setSections] = useState<Section[] | null>(null);
+  const [tree, setTree] = useState<RegionTreeResponse | null>(null);
+  const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchRegionTree().then((tree) => setSections(toSections(tree)));
+    fetchRegionTree().then(setTree);
   }, []);
+
+  const searchIndex = useMemo(() => (tree ? toSearchIndex(tree) : []), [tree]);
+  const normalizedQuery = normalize(query);
+
+  const sections: Section[] | null = useMemo(() => {
+    if (!tree) return null;
+    if (!normalizedQuery) return toSections(tree);
+    const matches = searchIndex
+      .filter((entry) => normalize(entry.path).includes(normalizedQuery))
+      .map((entry) => ({ ...entry.region, name: entry.path }));
+    return matches.length > 0 ? [{ title: `검색 결과 ${matches.length}건`, data: matches }] : [];
+  }, [tree, normalizedQuery, searchIndex]);
 
   async function handleSelect(region: RegionLeaf) {
     setSaving(true);
-    await saveSelectedRegion(region);
+    // Search results carry the full path as `name` for display — save the
+    // plain leaf name instead, matching what the rest of the app expects.
+    const leafName = region.name.split(" ").pop() ?? region.name;
+    await saveSelectedRegion({ id: region.id, name: leafName });
     router.replace("/categories");
   }
 
@@ -51,6 +90,16 @@ export default function RegionSelectScreen() {
       <Text style={styles.title}>지역 선택</Text>
       <Text style={styles.subtitle}>동네를 선택하면 해당 지역 업체를 보여드려요</Text>
 
+      <TextInput
+        style={styles.searchInput}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="동네 이름으로 검색 (예: 영통동)"
+        placeholderTextColor={colors.textFaint}
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
+
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -62,6 +111,10 @@ export default function RegionSelectScreen() {
             <Text style={styles.itemText}>{item.name}</Text>
           </Pressable>
         )}
+        ListEmptyComponent={
+          normalizedQuery ? <Text style={styles.emptyText}>검색 결과가 없어요.</Text> : null
+        }
+        keyboardShouldPersistTaps="handled"
         style={styles.list}
       />
     </Screen>
@@ -71,7 +124,23 @@ export default function RegionSelectScreen() {
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   subtitle: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.textMuted },
+  searchInput: {
+    marginTop: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md + 2,
+    fontSize: fontSize.base,
+    color: colors.text,
+  },
   list: { marginTop: spacing.lg },
+  emptyText: {
+    marginTop: spacing.lg,
+    fontSize: fontSize.base,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
   sectionHeader: {
     marginTop: spacing.md,
     marginBottom: spacing.xs + 2,

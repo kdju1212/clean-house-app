@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { getInfoAsync } from "expo-file-system";
@@ -219,6 +219,33 @@ function RegionsSection({
 }) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set(selectedIds));
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const normalizedQuery = query.trim().replace(/\s+/g, "");
+
+  // Groups (시/도 시/군/구) with no matching dong AND whose own name doesn't
+  // match are hidden entirely; a matching group keeps all of its dong chips
+  // (not just the matching ones) so "전체 선택" style browsing still works.
+  const visibleGroups = useMemo(() => {
+    const groups = sidoTree.flatMap((sido) =>
+      sido.children.map((sigungu) => ({
+        id: sigungu.id,
+        label: `${sido.name} ${sigungu.name}`,
+        children: sigungu.children,
+      }))
+    );
+    if (!normalizedQuery) return groups;
+    return groups.filter(
+      (group) =>
+        group.label.replace(/\s+/g, "").includes(normalizedQuery) ||
+        group.children.some((c) => c.name.includes(normalizedQuery))
+    );
+  }, [sidoTree, normalizedQuery]);
+
+  const visibleLegacyRegions = useMemo(() => {
+    if (!normalizedQuery) return legacyRegions;
+    return legacyRegions.filter((r) => r.name.includes(normalizedQuery));
+  }, [legacyRegions, normalizedQuery]);
 
   function toggleLeaf(id: string) {
     setSelected((prev) => {
@@ -259,47 +286,59 @@ function RegionsSection({
         차량으로 이동 가능한 지역을 모두 선택해주세요. 구 전체를 선택하면 소속된 동 전체가 포함돼요.
       </Text>
 
-      {sidoTree.map((sido) =>
-        sido.children.map((sigungu) => {
-          const childIds = sigungu.children.map((c) => c.id);
-          const checkedCount = childIds.filter((id) => selected.has(id)).length;
-          const allChecked = childIds.length > 0 && checkedCount === childIds.length;
-          const someChecked = !allChecked && checkedCount > 0;
+      <TextInput
+        style={styles.searchInput}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="지역 이름으로 검색 (예: 영통구)"
+        placeholderTextColor={colors.textFaint}
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
 
-          return (
-            <View key={sigungu.id} style={styles.regionGroup}>
-              <Pressable
-                style={styles.regionGroupHeader}
-                onPress={() => toggleGroup(childIds, !allChecked)}
-              >
-                <Text style={styles.regionGroupTitle}>
-                  {sido.name} {sigungu.name}
-                  {allChecked ? " (전체)" : someChecked ? " (일부 지역)" : ""}
-                </Text>
-              </Pressable>
-              <View style={styles.chipRow}>
-                {sigungu.children.map((dong) => (
-                  <Pressable
-                    key={dong.id}
-                    style={[styles.chip, selected.has(dong.id) && styles.chipActive]}
-                    onPress={() => toggleLeaf(dong.id)}
-                  >
-                    <Text style={[styles.chipText, selected.has(dong.id) && styles.chipTextActive]}>
-                      {dong.name}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          );
-        })
+      {visibleGroups.length === 0 && visibleLegacyRegions.length === 0 && (
+        <Text style={styles.helperText}>검색 결과가 없어요.</Text>
       )}
 
-      {legacyRegions.length > 0 && (
+      {visibleGroups.map((group) => {
+        const childIds = group.children.map((c) => c.id);
+        const checkedCount = childIds.filter((id) => selected.has(id)).length;
+        const allChecked = childIds.length > 0 && checkedCount === childIds.length;
+        const someChecked = !allChecked && checkedCount > 0;
+
+        return (
+          <View key={group.id} style={styles.regionGroup}>
+            <Pressable
+              style={styles.regionGroupHeader}
+              onPress={() => toggleGroup(childIds, !allChecked)}
+            >
+              <Text style={styles.regionGroupTitle}>
+                {group.label}
+                {allChecked ? " (전체)" : someChecked ? " (일부 지역)" : ""}
+              </Text>
+            </Pressable>
+            <View style={styles.chipRow}>
+              {group.children.map((dong) => (
+                <Pressable
+                  key={dong.id}
+                  style={[styles.chip, selected.has(dong.id) && styles.chipActive]}
+                  onPress={() => toggleLeaf(dong.id)}
+                >
+                  <Text style={[styles.chipText, selected.has(dong.id) && styles.chipTextActive]}>
+                    {dong.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        );
+      })}
+
+      {visibleLegacyRegions.length > 0 && (
         <View style={styles.regionGroup}>
           <Text style={styles.regionGroupTitle}>기타</Text>
           <View style={styles.chipRow}>
-            {legacyRegions.map((r) => (
+            {visibleLegacyRegions.map((r) => (
               <Pressable
                 key={r.id}
                 style={[styles.chip, selected.has(r.id) && styles.chipActive]}
@@ -455,6 +494,16 @@ const styles = StyleSheet.create({
   chipText: { fontSize: fontSize.sm, color: "#404040" },
   chipTextActive: { color: colors.onPrimary },
   helperText: { marginTop: spacing.xs + 2, fontSize: fontSize.xs, color: colors.textFaint },
+  searchInput: {
+    marginTop: spacing.sm + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    fontSize: fontSize.base,
+    color: colors.text,
+  },
   regionGroup: { marginTop: spacing.md },
   regionGroupHeader: { paddingVertical: spacing.xs },
   regionGroupTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
