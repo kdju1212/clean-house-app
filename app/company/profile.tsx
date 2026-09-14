@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -14,7 +14,7 @@ import {
   type CompanyMe,
 } from "../../src/api/company";
 import { fetchCategories, type Category } from "../../src/api/categories";
-import { fetchRegionTree, type RegionSido, type RegionLeaf } from "../../src/api/regions";
+import { searchRegionGroups, type RegionGroupHit } from "../../src/api/regions";
 import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
 import { Button } from "../../src/components/Button";
@@ -30,8 +30,6 @@ const PHOTO_TYPE_LABEL: Record<string, string> = {
 export default function CompanyProfileScreen() {
   const [data, setData] = useState<CompanyMe | null>(null);
   const [categories, setCategories] = useState<Category[] | null>(null);
-  const [sidoTree, setSidoTree] = useState<RegionSido[] | null>(null);
-  const [legacyRegions, setLegacyRegions] = useState<RegionLeaf[] | null>(null);
 
   const load = useCallback(() => {
     fetchCompanyMe().then(setData);
@@ -41,16 +39,10 @@ export default function CompanyProfileScreen() {
     useCallback(() => {
       load();
       if (!categories) fetchCategories().then(setCategories);
-      if (!sidoTree) {
-        fetchRegionTree().then((tree) => {
-          setSidoTree(tree.sido);
-          setLegacyRegions(tree.legacyRegions);
-        });
-      }
-    }, [load, categories, sidoTree])
+    }, [load, categories])
   );
 
-  if (!data || !categories || !sidoTree || !legacyRegions) {
+  if (!data || !categories) {
     return <LoadingView />;
   }
 
@@ -61,9 +53,8 @@ export default function CompanyProfileScreen() {
       <ProfileSection company={data.company} onSaved={load} />
       <ServicesSection services={data.services} categories={categories} onChanged={load} />
       <RegionsSection
-        sidoTree={sidoTree}
-        legacyRegions={legacyRegions}
-        selectedIds={data.regionIds}
+        legacyRegions={data.legacyRegions}
+        selectedRegions={data.selectedRegions}
         onSaved={load}
       />
       <PhotosSection photos={data.photos} mainImageUrl={data.company.mainImageUrl} onChanged={load} />
@@ -207,61 +198,71 @@ function ServicesSection({
 }
 
 function RegionsSection({
-  sidoTree,
   legacyRegions,
-  selectedIds,
+  selectedRegions,
   onSaved,
 }: {
-  sidoTree: RegionSido[];
-  legacyRegions: RegionLeaf[];
-  selectedIds: string[];
+  legacyRegions: { id: string; name: string }[];
+  selectedRegions: { id: string; label: string }[];
   onSaved: () => void;
 }) {
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(selectedIds));
+  // Map (not Set) so a label is always on hand for the "선택된 지역" chips
+  // below, even once the search that originally surfaced a pick has been
+  // cleared or replaced by another one.
+  const [selected, setSelected] = useState<Map<string, string>>(
+    () => new Map(selectedRegions.map((r) => [r.id, r.label]))
+  );
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
+  const [groups, setGroups] = useState<RegionGroupHit[] | null>(null);
+  const [searching, setSearching] = useState(false);
 
-  const normalizedQuery = query.trim().replace(/\s+/g, "");
+  const normalizedQuery = query.trim();
 
-  // Groups (시/도 시/군/구) with no matching dong AND whose own name doesn't
-  // match are hidden entirely; a matching group keeps all of its dong chips
-  // (not just the matching ones) so "전체 선택" style browsing still works.
-  const visibleGroups = useMemo(() => {
-    const groups = sidoTree.flatMap((sido) =>
-      sido.children.map((sigungu) => ({
-        id: sigungu.id,
-        label: `${sido.name} ${sigungu.name}`,
-        children: sigungu.children,
-      }))
-    );
-    if (!normalizedQuery) return groups;
-    return groups.filter(
-      (group) =>
-        group.label.replace(/\s+/g, "").includes(normalizedQuery) ||
-        group.children.some((c) => c.name.includes(normalizedQuery))
-    );
-  }, [sidoTree, normalizedQuery]);
+  // Server-side search (see /api/mobile/regions/search-groups) instead of
+  // fetching all ~256 시/군/구 with all ~5,000 동 up front — that full tree
+  // fetched eagerly on every screen focus was what made this screen slow.
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (!normalizedQuery) {
+        setGroups(null);
+        setSearching(false);
+        return;
+      }
+      setSearching(true);
+      searchRegionGroups(query)
+        .then((results) => {
+          if (!cancelled) setGroups(results);
+        })
+        .catch(() => {
+          if (!cancelled) setGroups([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, normalizedQuery]);
 
-  const visibleLegacyRegions = useMemo(() => {
-    if (!normalizedQuery) return legacyRegions;
-    return legacyRegions.filter((r) => r.name.includes(normalizedQuery));
-  }, [legacyRegions, normalizedQuery]);
-
-  function toggleLeaf(id: string) {
+  function toggleLeaf(id: string, label: string) {
     setSelected((prev) => {
-      const next = new Set(prev);
+      const next = new Map(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else next.set(id, label);
       return next;
     });
   }
 
-  function toggleGroup(childIds: string[], checked: boolean) {
+  function toggleGroup(group: RegionGroupHit, checked: boolean) {
     setSelected((prev) => {
-      const next = new Set(prev);
-      for (const id of childIds) {
-        if (checked) next.add(id);
-        else next.delete(id);
+      const next = new Map(prev);
+      for (const child of group.children) {
+        if (checked) next.set(child.id, `${group.name} ${child.name}`);
+        else next.delete(child.id);
       }
       return next;
     });
@@ -270,7 +271,7 @@ function RegionsSection({
   async function handleSave() {
     setSaving(true);
     try {
-      await setCompanyRegions([...selected]);
+      await setCompanyRegions([...selected.keys()]);
       onSaved();
       Alert.alert("저장 완료", "서비스 지역이 저장됐어요.");
     } catch (err) {
@@ -286,6 +287,23 @@ function RegionsSection({
         차량으로 이동 가능한 지역을 모두 선택해주세요. 구 전체를 선택하면 소속된 동 전체가 포함돼요.
       </Text>
 
+      {selected.size > 0 && (
+        <View style={styles.regionGroup}>
+          <Text style={styles.regionGroupTitle}>선택된 지역 ({selected.size})</Text>
+          <View style={styles.chipRow}>
+            {[...selected.entries()].map(([id, label]) => (
+              <Pressable
+                key={id}
+                style={[styles.chip, styles.chipActive]}
+                onPress={() => toggleLeaf(id, label)}
+              >
+                <Text style={styles.chipTextActive}>{label} ×</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
       <TextInput
         style={styles.searchInput}
         value={query}
@@ -296,61 +314,65 @@ function RegionsSection({
         autoCapitalize="none"
       />
 
-      {visibleGroups.length === 0 && visibleLegacyRegions.length === 0 && (
-        <Text style={styles.helperText}>검색 결과가 없어요.</Text>
-      )}
+      {normalizedQuery ? (
+        <>
+          {searching && <Text style={styles.helperText}>검색 중...</Text>}
+          {!searching && groups?.length === 0 && (
+            <Text style={styles.helperText}>검색 결과가 없어요.</Text>
+          )}
+          {groups?.map((group) => {
+            const childIds = group.children.map((c) => c.id);
+            const checkedCount = childIds.filter((id) => selected.has(id)).length;
+            const allChecked = childIds.length > 0 && checkedCount === childIds.length;
+            const someChecked = !allChecked && checkedCount > 0;
 
-      {visibleGroups.map((group) => {
-        const childIds = group.children.map((c) => c.id);
-        const checkedCount = childIds.filter((id) => selected.has(id)).length;
-        const allChecked = childIds.length > 0 && checkedCount === childIds.length;
-        const someChecked = !allChecked && checkedCount > 0;
-
-        return (
-          <View key={group.id} style={styles.regionGroup}>
-            <Pressable
-              style={styles.regionGroupHeader}
-              onPress={() => toggleGroup(childIds, !allChecked)}
-            >
-              <Text style={styles.regionGroupTitle}>
-                {group.label}
-                {allChecked ? " (전체)" : someChecked ? " (일부 지역)" : ""}
-              </Text>
-            </Pressable>
-            <View style={styles.chipRow}>
-              {group.children.map((dong) => (
+            return (
+              <View key={group.id} style={styles.regionGroup}>
                 <Pressable
-                  key={dong.id}
-                  style={[styles.chip, selected.has(dong.id) && styles.chipActive]}
-                  onPress={() => toggleLeaf(dong.id)}
+                  style={styles.regionGroupHeader}
+                  onPress={() => toggleGroup(group, !allChecked)}
                 >
-                  <Text style={[styles.chipText, selected.has(dong.id) && styles.chipTextActive]}>
-                    {dong.name}
+                  <Text style={styles.regionGroupTitle}>
+                    {group.name}
+                    {allChecked ? " (전체)" : someChecked ? " (일부 지역)" : ""}
+                  </Text>
+                </Pressable>
+                <View style={styles.chipRow}>
+                  {group.children.map((dong) => (
+                    <Pressable
+                      key={dong.id}
+                      style={[styles.chip, selected.has(dong.id) && styles.chipActive]}
+                      onPress={() => toggleLeaf(dong.id, `${group.name} ${dong.name}`)}
+                    >
+                      <Text style={[styles.chipText, selected.has(dong.id) && styles.chipTextActive]}>
+                        {dong.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+        </>
+      ) : (
+        legacyRegions.length > 0 && (
+          <View style={styles.regionGroup}>
+            <Text style={styles.regionGroupTitle}>기타</Text>
+            <View style={styles.chipRow}>
+              {legacyRegions.map((r) => (
+                <Pressable
+                  key={r.id}
+                  style={[styles.chip, selected.has(r.id) && styles.chipActive]}
+                  onPress={() => toggleLeaf(r.id, r.name)}
+                >
+                  <Text style={[styles.chipText, selected.has(r.id) && styles.chipTextActive]}>
+                    {r.name}
                   </Text>
                 </Pressable>
               ))}
             </View>
           </View>
-        );
-      })}
-
-      {visibleLegacyRegions.length > 0 && (
-        <View style={styles.regionGroup}>
-          <Text style={styles.regionGroupTitle}>기타</Text>
-          <View style={styles.chipRow}>
-            {visibleLegacyRegions.map((r) => (
-              <Pressable
-                key={r.id}
-                style={[styles.chip, selected.has(r.id) && styles.chipActive]}
-                onPress={() => toggleLeaf(r.id)}
-              >
-                <Text style={[styles.chipText, selected.has(r.id) && styles.chipTextActive]}>
-                  {r.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        )
       )}
 
       <Button title="저장" onPress={handleSave} loading={saving} style={styles.saveButton} />

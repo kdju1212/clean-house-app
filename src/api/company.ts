@@ -30,6 +30,8 @@ export type CompanyMe = {
   reviewCount: number;
   services: CompanyService[];
   regionIds: string[];
+  selectedRegions: { id: string; label: string }[];
+  legacyRegions: { id: string; name: string }[];
   photos: CompanyPhoto[];
 };
 

@@ -21,3 +21,18 @@ export async function fetchRegionByCoords(lat: number, lng: number): Promise<Reg
     { auth: false }
   );
 }
+
+export type RegionGroupHit = { id: string; name: string; children: RegionLeaf[] };
+
+/**
+ * 시/군/구 search for the company service-area picker: each hit carries its
+ * *entire* 동 list (not just what matched) so "전체" bulk-toggle works —
+ * see the same-named searchRegionGroups() in the web repo's src/lib/region.ts.
+ */
+export async function searchRegionGroups(query: string): Promise<RegionGroupHit[]> {
+  const { groups } = await apiFetch<{ groups: RegionGroupHit[] }>(
+    `/api/mobile/regions/search-groups?q=${encodeURIComponent(query)}`,
+    { auth: false }
+  );
+  return groups;
+}
