@@ -11,7 +11,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.cleanhouse.app",
+      "package": "com.kimdongjoo.cleanhouseapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
