@@ -16,20 +16,29 @@ export default function Index() {
 
   useEffect(() => {
     (async () => {
-      const token = await getStoredToken();
-      if (!token) {
+      try {
+        const token = await getStoredToken();
+        if (!token) {
+          setDestination("/login");
+          return;
+        }
+
+        const user = await getStoredUser();
+        if (user?.role === "COMPANY") {
+          setDestination("/company");
+          return;
+        }
+
+        const region = await getSelectedRegion();
+        setDestination(region ? "/categories" : "/region-select");
+      } catch (err) {
+        // Whatever went wrong reading local storage, never leave the user
+        // stuck on the loading spinner forever — a release build shows no
+        // error screen here, so a silent throw in this effect previously
+        // meant setDestination() never ran again.
+        console.error("Index routing failed:", err);
         setDestination("/login");
-        return;
       }
-
-      const user = await getStoredUser();
-      if (user?.role === "COMPANY") {
-        setDestination("/company");
-        return;
-      }
-
-      const region = await getSelectedRegion();
-      setDestination(region ? "/categories" : "/region-select");
     })();
   }, []);
 
