@@ -16,7 +16,6 @@ export default function CategoryCompaniesScreen() {
   const [categoryName, setCategoryName] = useState<string | null>(null);
   const [regionName, setRegionName] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,7 +28,6 @@ export default function CategoryCompaniesScreen() {
       const result = await searchCompanies({ slug, regionId: region.id });
       if (cancelled) return;
       setCategoryName(result.category.name);
-      setCategoryId(result.category.id);
       setRegionName(result.region.name);
       setRows([
         ...result.adRows.map((r) => ({ ...r, isAd: true })),
@@ -41,17 +39,8 @@ export default function CategoryCompaniesScreen() {
     };
   }, [slug]);
 
-  function goToReserve(company: Row) {
-    if (!categoryId) return;
-    router.push({
-      pathname: "/companies/[id]/reserve",
-      params: {
-        id: company.id,
-        name: company.name,
-        categoryId,
-        price: String(company.price),
-      },
-    });
+  function goToDetail(company: Row) {
+    router.push({ pathname: "/companies/[id]", params: { id: company.id } });
   }
 
   if (!rows) {
@@ -73,7 +62,7 @@ export default function CategoryCompaniesScreen() {
           keyExtractor={(item, index) => `${item.isAd ? "ad" : "row"}-${item.id}-${index}`}
           style={styles.list}
           renderItem={({ item }) => (
-            <Pressable style={styles.card} onPress={() => goToReserve(item)}>
+            <Pressable style={styles.card} onPress={() => goToDetail(item)}>
               {item.mainImageUrl ? (
                 <Image source={{ uri: item.mainImageUrl }} style={styles.thumb} />
               ) : (
