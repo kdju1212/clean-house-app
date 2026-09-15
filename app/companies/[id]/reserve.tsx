@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import * as Location from "expo-location";
 import { createReservation } from "../../../src/api/reservations";
+import { fetchAddressByCoords } from "../../../src/api/address";
 import { getSelectedRegion } from "../../../src/storage/auth-storage";
 import { Screen } from "../../../src/components/Screen";
 import { Button } from "../../../src/components/Button";
@@ -36,6 +38,30 @@ export default function ReserveScreen() {
   const [desiredTime, setDesiredTime] = useState<string | null>(null);
   const [requestNote, setRequestNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
+
+  async function handleLocateAddress() {
+    setLocateError(null);
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocateError("위치 권한을 허용해주세요.");
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const { address: found } = await fetchAddressByCoords(
+        position.coords.latitude,
+        position.coords.longitude
+      );
+      setAddress(found);
+    } catch (err) {
+      setLocateError(err instanceof Error ? err.message : "위치로 주소를 찾지 못했어요.");
+    } finally {
+      setLocating(false);
+    }
+  }
 
   async function handleSubmit() {
     if (!desiredTime) {
@@ -93,7 +119,20 @@ export default function ReserveScreen() {
         keyboardType="phone-pad"
       />
 
-      <TextField label="서비스 주소" value={address} onChangeText={setAddress} placeholder="주소" />
+      <Text style={styles.label}>집주소</Text>
+      <View style={styles.addressRow}>
+        <TextInput
+          style={styles.addressInput}
+          value={address}
+          onChangeText={setAddress}
+          placeholder="주소"
+          placeholderTextColor={colors.textFaint}
+        />
+        <Pressable style={styles.locateButton} onPress={handleLocateAddress} disabled={locating}>
+          <Text style={styles.locateButtonText}>{locating ? "찾는 중..." : "내 위치로 찾기"}</Text>
+        </Pressable>
+      </View>
+      {locateError && <Text style={styles.errorText}>{locateError}</Text>}
       <TextField value={addressDetail} onChangeText={setAddressDetail} placeholder="상세 주소 (선택)" />
 
       <TextField
@@ -151,6 +190,26 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.textMuted,
   },
+  addressRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  addressInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 1,
+    fontSize: fontSize.md,
+    color: colors.text,
+  },
+  locateButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 1,
+  },
+  locateButtonText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text },
+  errorText: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.danger },
   timeGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   timeChip: {
     borderWidth: 1,
