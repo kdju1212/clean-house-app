@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { login as kakaoLogin } from "@react-native-seoul/kakao-login";
-import { loginWithKakao } from "../src/api/auth";
+import { loginWithKakao, loginWithTestAccount } from "../src/api/auth";
 import { Button } from "../src/components/Button";
-import { colors, fontSize, fontWeight, spacing } from "../src/theme";
+import { colors, fontSize, fontWeight, radius, spacing } from "../src/theme";
+
+const TEST_ROLES: { role: "CUSTOMER" | "COMPANY" | "ADMIN"; label: string }[] = [
+  { role: "CUSTOMER", label: "고객으로 로그인" },
+  { role: "COMPANY", label: "업체로 로그인" },
+  { role: "ADMIN", label: "관리자로 로그인" },
+];
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
+  const [showTestLogin, setShowTestLogin] = useState(false);
+  const [testSecret, setTestSecret] = useState("");
+  const [testRoleLoading, setTestRoleLoading] = useState<string | null>(null);
 
   async function handleKakaoLogin() {
     setLoading(true);
@@ -29,6 +38,21 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleTestLogin(role: "CUSTOMER" | "COMPANY" | "ADMIN") {
+    setTestRoleLoading(role);
+    try {
+      const user = await loginWithTestAccount(testSecret, role);
+      router.replace(user.role === "COMPANY" ? "/company" : "/region-select");
+    } catch (err) {
+      Alert.alert(
+        "테스트 로그인 실패",
+        err instanceof Error ? err.message : "테스트 로그인에 실패했어요."
+      );
+    } finally {
+      setTestRoleLoading(null);
+    }
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>우리동네 청소업체</Text>
@@ -41,6 +65,36 @@ export default function LoginScreen() {
         variant="kakao"
         style={styles.kakaoButton}
       />
+
+      <Pressable onPress={() => setShowTestLogin((v) => !v)} style={styles.testToggle}>
+        <Text style={styles.testToggleText}>테스트 계정으로 로그인</Text>
+      </Pressable>
+
+      {showTestLogin && (
+        <View style={styles.testPanel}>
+          <TextInput
+            style={styles.testInput}
+            value={testSecret}
+            onChangeText={setTestSecret}
+            placeholder="TEST_LOGIN_SECRET"
+            placeholderTextColor={colors.textFaint}
+            secureTextEntry
+            autoCapitalize="none"
+          />
+          {TEST_ROLES.map(({ role, label }) => (
+            <Pressable
+              key={role}
+              style={styles.testRoleButton}
+              onPress={() => handleTestLogin(role)}
+              disabled={testRoleLoading !== null}
+            >
+              <Text style={styles.testRoleButtonText}>
+                {testRoleLoading === role ? "로그인 중..." : label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -61,4 +115,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   kakaoButton: { marginTop: spacing.xxxl + spacing.sm, width: "100%" },
+  testToggle: { marginTop: spacing.xl, padding: spacing.xs },
+  testToggleText: { fontSize: fontSize.xs, color: colors.textFaint },
+  testPanel: { marginTop: spacing.sm, width: "100%", gap: spacing.sm },
+  testInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 1,
+    fontSize: fontSize.md,
+    color: colors.text,
+  },
+  testRoleButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + 1,
+    alignItems: "center",
+  },
+  testRoleButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
 });
