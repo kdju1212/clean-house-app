@@ -23,21 +23,36 @@ export default function CompanyDashboardScreen() {
     | { status: "ready"; data: CompanyMe }
   >({ status: "loading" });
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(() => {
+    return fetchCompanyMe()
+      .then((data) => setState({ status: "ready", data }))
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 404) {
+          setState({ status: "no-company" });
+        }
+      });
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      fetchCompanyMe()
-        .then((data) => setState({ status: "ready", data }))
-        .catch((err) => {
-          if (err instanceof ApiError && err.status === 404) {
-            setState({ status: "no-company" });
-          }
-        });
-    }, [])
+      load();
+    }, [load])
   );
 
   async function handleLogout() {
     await logout();
     router.replace("/login");
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   if (state.status === "loading") {
@@ -46,7 +61,7 @@ export default function CompanyDashboardScreen() {
 
   if (state.status === "no-company") {
     return (
-      <Screen>
+      <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
         <Text style={styles.title}>업체 관리</Text>
         <Text style={styles.emptyText}>
           아직 등록된 업체가 없어요. 웹에서 먼저 업체를 등록해주세요.
@@ -61,7 +76,7 @@ export default function CompanyDashboardScreen() {
   const { company, requestedCount, averageRating, reviewCount } = state.data;
 
   return (
-    <Screen>
+    <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
       <View style={styles.header}>
         <Text style={styles.title}>{company.name}</Text>
         <Pressable onPress={handleLogout}>

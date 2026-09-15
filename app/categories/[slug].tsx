@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { searchCompanies, type CompanyRow } from "../../src/api/companies";
 import { getSelectedRegion } from "../../src/storage/auth-storage";
 import { Screen } from "../../src/components/Screen";
@@ -16,28 +16,37 @@ export default function CategoryCompaniesScreen() {
   const [categoryName, setCategoryName] = useState<string | null>(null);
   const [regionName, setRegionName] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const region = await getSelectedRegion();
-      if (!region) {
-        router.replace("/region-select");
-        return;
-      }
-      const result = await searchCompanies({ slug, regionId: region.id });
-      if (cancelled) return;
-      setCategoryName(result.category.name);
-      setRegionName(result.region.name);
-      setRows([
-        ...result.adRows.map((r) => ({ ...r, isAd: true })),
-        ...result.rows,
-      ]);
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async () => {
+    const region = await getSelectedRegion();
+    if (!region) {
+      router.replace("/region-select");
+      return;
+    }
+    const result = await searchCompanies({ slug, regionId: region.id });
+    setCategoryName(result.category.name);
+    setRegionName(result.region.name);
+    setRows([
+      ...result.adRows.map((r) => ({ ...r, isAd: true })),
+      ...result.rows,
+    ]);
   }, [slug]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   function goToDetail(company: Row) {
     router.push({ pathname: "/companies/[id]", params: { id: company.id } });
@@ -54,39 +63,40 @@ export default function CategoryCompaniesScreen() {
       </Text>
       <Text style={styles.title}>{categoryName} 업체</Text>
 
-      {rows.length === 0 ? (
-        <EmptyState text={`아직 ${regionName}에 등록된 ${categoryName} 업체가 없어요.`} />
-      ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(item, index) => `${item.isAd ? "ad" : "row"}-${item.id}-${index}`}
-          style={styles.list}
-          renderItem={({ item }) => (
-            <Pressable style={styles.card} onPress={() => goToDetail(item)}>
-              {item.mainImageUrl ? (
-                <Image source={{ uri: item.mainImageUrl }} style={styles.thumb} />
-              ) : (
-                <View style={[styles.thumb, styles.thumbPlaceholder]} />
-              )}
-              <View style={styles.cardBody}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardName}>{item.name}</Text>
-                  {item.isAd && <Badge label="광고" tone="warning" />}
-                </View>
-                <Text style={styles.cardIntro} numberOfLines={1}>
-                  {item.introText ?? ""}
-                </Text>
-                <Text style={styles.cardMeta}>
-                  {item.price.toLocaleString()}원
-                  {item.reviewCount > 0
-                    ? ` · ★ ${item.rating.toFixed(1)} (${item.reviewCount})`
-                    : " · 리뷰 없음"}
-                </Text>
+      <FlatList
+        data={rows}
+        keyExtractor={(item, index) => `${item.isAd ? "ad" : "row"}-${item.id}-${index}`}
+        style={styles.list}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        ListEmptyComponent={
+          <EmptyState text={`아직 ${regionName}에 등록된 ${categoryName} 업체가 없어요.`} />
+        }
+        renderItem={({ item }) => (
+          <Pressable style={styles.card} onPress={() => goToDetail(item)}>
+            {item.mainImageUrl ? (
+              <Image source={{ uri: item.mainImageUrl }} style={styles.thumb} />
+            ) : (
+              <View style={[styles.thumb, styles.thumbPlaceholder]} />
+            )}
+            <View style={styles.cardBody}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardName}>{item.name}</Text>
+                {item.isAd && <Badge label="광고" tone="warning" />}
               </View>
-            </Pressable>
-          )}
-        />
-      )}
+              <Text style={styles.cardIntro} numberOfLines={1}>
+                {item.introText ?? ""}
+              </Text>
+              <Text style={styles.cardMeta}>
+                {item.price.toLocaleString()}원
+                {item.reviewCount > 0
+                  ? ` · ★ ${item.rating.toFixed(1)} (${item.reviewCount})`
+                  : " · 리뷰 없음"}
+              </Text>
+            </View>
+          </Pressable>
+        )}
+      />
     </Screen>
   );
 }

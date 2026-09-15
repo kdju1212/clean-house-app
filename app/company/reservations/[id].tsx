@@ -25,9 +25,10 @@ export default function CompanyReservationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [reservation, setReservation] = useState<CompanyReservationDetail | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(() => {
-    fetchCompanyReservationDetail(id).then(setReservation);
+    return fetchCompanyReservationDetail(id).then(setReservation);
   }, [id]);
 
   useFocusEffect(
@@ -35,6 +36,15 @@ export default function CompanyReservationDetailScreen() {
       load();
     }, [load])
   );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleAction(action: "accept" | "reject" | "complete") {
     setBusy(true);
@@ -51,7 +61,7 @@ export default function CompanyReservationDetailScreen() {
   }
 
   return (
-    <Screen>
+    <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
       <View style={styles.header}>
         <Text style={styles.title}>예약 상세</Text>
         <Badge label={STATUS_LABEL[reservation.status]} />

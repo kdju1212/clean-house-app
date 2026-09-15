@@ -29,10 +29,13 @@ export default function CompanyDetailScreen() {
   const [data, setData] = useState<CompanyDetail | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(() => {
-    fetchCompanyDetail(id).then(setData);
-    getStoredToken().then((token) => setLoggedIn(!!token));
+    return Promise.all([
+      fetchCompanyDetail(id).then(setData),
+      getStoredToken().then((token) => setLoggedIn(!!token)),
+    ]);
   }, [id]);
 
   useFocusEffect(
@@ -40,6 +43,15 @@ export default function CompanyDetailScreen() {
       load();
     }, [load])
   );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleToggleFavorite() {
     if (!loggedIn) {
@@ -91,7 +103,7 @@ export default function CompanyDetailScreen() {
   const beforeAfterPhotos = photos.filter((p) => p.type === "BEFORE_AFTER");
 
   return (
-    <Screen scroll style={styles.noPad}>
+    <Screen scroll style={styles.noPad} refreshing={refreshing} onRefresh={handleRefresh}>
       {galleryPhotos.length > 0 ? (
         <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
           {galleryPhotos.map((photo) => (

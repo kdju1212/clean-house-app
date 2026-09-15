@@ -32,9 +32,10 @@ export default function CompanyReservationsScreen() {
   const [activeStatus, setActiveStatus] = useState<string>("");
   const [reservations, setReservations] = useState<CompanyReservation[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(() => {
-    fetchCompanyReservations(activeStatus || undefined).then(setReservations);
+    return fetchCompanyReservations(activeStatus || undefined).then(setReservations);
   }, [activeStatus]);
 
   useFocusEffect(
@@ -42,6 +43,15 @@ export default function CompanyReservationsScreen() {
       load();
     }, [load])
   );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleAction(id: string, action: "accept" | "reject" | "complete") {
     setBusyId(id);
@@ -80,6 +90,8 @@ export default function CompanyReservationsScreen() {
         data={reservations ?? []}
         keyExtractor={(item) => item.id}
         style={styles.list}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         ListEmptyComponent={
           reservations ? <EmptyState text="아직 들어온 예약이 없어요." /> : null
         }

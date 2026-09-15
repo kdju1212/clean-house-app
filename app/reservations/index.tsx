@@ -18,12 +18,24 @@ const STATUS_LABEL: Record<MyReservation["status"], string> = {
 
 export default function MyReservationsScreen() {
   const [reservations, setReservations] = useState<MyReservation[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(() => fetchMyReservations().then(setReservations), []);
 
   useFocusEffect(
     useCallback(() => {
-      fetchMyReservations().then(setReservations);
-    }, [])
+      load();
+    }, [load])
   );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   return (
     <Screen>
@@ -33,6 +45,8 @@ export default function MyReservationsScreen() {
         data={reservations ?? []}
         keyExtractor={(item) => item.id}
         style={styles.list}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         ListEmptyComponent={
           reservations ? <EmptyState text="아직 예약 내역이 없어요." /> : null
         }

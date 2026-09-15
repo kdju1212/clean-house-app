@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ScrollView, StyleSheet, View, ViewStyle } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing } from "../theme";
 
@@ -20,10 +20,17 @@ export function Screen({
   children,
   scroll = false,
   style,
+  refreshing,
+  onRefresh,
 }: {
   children: ReactNode;
   scroll?: boolean;
   style?: ViewStyle;
+  /** Pull-to-refresh — only wired up when `scroll` is on; screens with
+   * their own FlatList/SectionList should pass refreshing/onRefresh to
+   * that list directly instead (it already has its own scroll container). */
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const basePadding = { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom };
@@ -33,6 +40,11 @@ export function Screen({
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.scrollContent, basePadding, style]}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl refreshing={refreshing ?? false} onRefresh={onRefresh} />
+          ) : undefined
+        }
       >
         {children}
       </ScrollView>

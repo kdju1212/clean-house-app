@@ -44,11 +44,14 @@ export default function CategoriesScreen() {
     }, [])
   );
 
+  const [refreshing, setRefreshing] = useState(false);
+  const loadCategories = useCallback(() => fetchCategories().then(setCategories), []);
+
   useFocusEffect(
     useCallback(() => {
       if (categories) return;
-      fetchCategories().then(setCategories);
-    }, [categories])
+      loadCategories();
+    }, [categories, loadCategories])
   );
 
   async function handleLogout() {
@@ -56,12 +59,21 @@ export default function CategoriesScreen() {
     router.replace("/login");
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await loadCategories();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   if (!region || !categories) {
     return <LoadingView />;
   }
 
   return (
-    <Screen>
+    <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>어떤 청소가 필요하세요?</Text>

@@ -30,9 +30,10 @@ const PHOTO_TYPE_LABEL: Record<string, string> = {
 export default function CompanyProfileScreen() {
   const [data, setData] = useState<CompanyMe | null>(null);
   const [categories, setCategories] = useState<Category[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(() => {
-    fetchCompanyMe().then(setData);
+    return fetchCompanyMe().then(setData);
   }, []);
 
   useFocusEffect(
@@ -42,12 +43,21 @@ export default function CompanyProfileScreen() {
     }, [load, categories])
   );
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   if (!data || !categories) {
     return <LoadingView />;
   }
 
   return (
-    <Screen scroll>
+    <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
       <Text style={styles.title}>업체 프로필 관리</Text>
 
       <ProfileSection company={data.company} onSaved={load} />
