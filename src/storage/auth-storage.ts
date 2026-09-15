@@ -8,6 +8,7 @@ export type StoredUser = {
   name: string | null;
   email: string | null;
   role: "CUSTOMER" | "COMPANY" | "ADMIN";
+  phone: string | null;
 };
 
 /**
@@ -42,6 +43,19 @@ export async function getStoredUser(): Promise<StoredUser | null> {
 
 export async function clearSession(): Promise<void> {
   await AsyncStorage.removeMany([TOKEN_KEY, USER_KEY]);
+}
+
+/**
+ * The web app has a mypage screen to set your phone once and have it
+ * pre-fill every reservation form after that; the app has no such screen
+ * yet, so instead we save whatever phone number the customer types into a
+ * reservation the first time and pre-fill it from here next time — see
+ * app/companies/[id]/reserve.tsx.
+ */
+export async function updateStoredPhone(phone: string): Promise<void> {
+  const user = await getStoredUser();
+  if (!user || user.phone === phone) return;
+  await AsyncStorage.setItem(USER_KEY, JSON.stringify({ ...user, phone }));
 }
 
 const REGION_KEY = "selected_region";

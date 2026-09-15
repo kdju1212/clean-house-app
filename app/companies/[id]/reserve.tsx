@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Location from "expo-location";
 import { createReservation } from "../../../src/api/reservations";
 import { fetchAddressByCoords } from "../../../src/api/address";
-import { getSelectedRegion } from "../../../src/storage/auth-storage";
+import { getSelectedRegion, getStoredUser, updateStoredPhone } from "../../../src/storage/auth-storage";
 import { Screen } from "../../../src/components/Screen";
 import { Button } from "../../../src/components/Button";
 import { TextField } from "../../../src/components/TextField";
@@ -40,6 +40,20 @@ export default function ReserveScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Web pre-fills name/phone from the account (Kakao profile name, phone
+    // set once in mypage), so it never seems to "ask" for them — the app
+    // has no mypage-style edit screen yet, so this is the closest parity:
+    // pre-fill from whatever's stored (name from login, phone from a
+    // previous reservation), letting the customer just confirm instead of
+    // retyping every time.
+    getStoredUser().then((user) => {
+      if (!user) return;
+      if (user.name) setName(user.name);
+      if (user.phone) setPhone(user.phone);
+    });
+  }, []);
 
   async function handleLocateAddress() {
     setLocateError(null);
@@ -89,6 +103,8 @@ export default function ReserveScreen() {
         desiredTime,
         requestNote: requestNote || undefined,
       });
+
+      await updateStoredPhone(phone);
 
       Alert.alert("예약 신청 완료", "업체 확인 후 예약이 확정돼요.", [
         { text: "확인", onPress: () => router.replace("/categories") },
