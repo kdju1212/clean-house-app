@@ -122,15 +122,18 @@ export default function CompanyDetailScreen() {
 
         <Section title="서비스 · 가격">
           {services.map((service) => (
-            <Pressable key={service.id} style={styles.serviceRow} onPress={() => goToReserve(service)}>
+            <View key={service.id} style={styles.serviceRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.serviceName}>{service.categoryName}</Text>
                 {service.description && (
                   <Text style={styles.serviceDescription}>{service.description}</Text>
                 )}
+                <Text style={styles.servicePrice}>{service.price.toLocaleString()}원</Text>
               </View>
-              <Text style={styles.servicePrice}>{service.price.toLocaleString()}원</Text>
-            </Pressable>
+              <Pressable style={styles.reserveButton} onPress={() => goToReserve(service)}>
+                <Text style={styles.reserveButtonText}>예약하기</Text>
+              </Pressable>
+            </View>
           ))}
           {services.length === 0 && (
             <Text style={styles.emptyText}>등록된 서비스가 없어요.</Text>
@@ -256,7 +259,15 @@ const styles = StyleSheet.create({
   },
   serviceName: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
   serviceDescription: { marginTop: 2, fontSize: fontSize.xs, color: colors.textMuted },
-  servicePrice: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  servicePrice: { marginTop: 2, fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  reserveButton: {
+    marginLeft: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  reserveButtonText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.onPrimary },
   emptyText: { fontSize: fontSize.base, color: colors.textFaint },
   photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   gridPhoto: { width: 100, height: 100, borderRadius: radius.md, backgroundColor: colors.surfaceMuted },
