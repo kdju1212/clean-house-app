@@ -1,5 +1,13 @@
-import { ReactNode } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
+import { ReactNode, Ref, forwardRef } from "react";
+import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing } from "../theme";
 
@@ -16,28 +24,36 @@ import { colors, spacing } from "../theme";
  * and let that list be the scroll container instead of nesting one inside
  * another.
  */
-export function Screen({
-  children,
-  scroll = false,
-  style,
-  refreshing,
-  onRefresh,
-}: {
-  children: ReactNode;
-  scroll?: boolean;
-  style?: ViewStyle;
-  /** Pull-to-refresh — only wired up when `scroll` is on; screens with
-   * their own FlatList/SectionList should pass refreshing/onRefresh to
-   * that list directly instead (it already has its own scroll container). */
-  refreshing?: boolean;
-  onRefresh?: () => void;
-}) {
+export const Screen = forwardRef(function Screen(
+  {
+    children,
+    scroll = false,
+    style,
+    refreshing,
+    onRefresh,
+    onScroll,
+  }: {
+    children: ReactNode;
+    scroll?: boolean;
+    style?: ViewStyle;
+    /** Pull-to-refresh — only wired up when `scroll` is on; screens with
+     * their own FlatList/SectionList should pass refreshing/onRefresh to
+     * that list directly instead (it already has its own scroll container). */
+    refreshing?: boolean;
+    onRefresh?: () => void;
+    /** Only wired up when `scroll` is on — e.g. for a scroll-to-top button
+     * that needs to know how far down the screen is. */
+    onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  },
+  ref: Ref<ScrollView>
+) {
   const insets = useSafeAreaInsets();
   const basePadding = { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom };
 
   if (scroll) {
     return (
       <ScrollView
+        ref={ref}
         style={styles.container}
         contentContainerStyle={[styles.scrollContent, basePadding, style]}
         refreshControl={
@@ -45,6 +61,8 @@ export function Screen({
             <RefreshControl refreshing={refreshing ?? false} onRefresh={onRefresh} />
           ) : undefined
         }
+        onScroll={onScroll}
+        scrollEventThrottle={onScroll ? 16 : undefined}
       >
         {children}
       </ScrollView>
@@ -52,7 +70,7 @@ export function Screen({
   }
 
   return <View style={[styles.container, styles.padded, basePadding, style]}>{children}</View>;
-}
+});
 
 const styles = StyleSheet.create({
   container: {
