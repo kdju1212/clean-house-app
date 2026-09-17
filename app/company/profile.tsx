@@ -12,6 +12,7 @@ import {
   uploadCompanyPhoto,
   deleteCompanyPhoto,
   type CompanyMe,
+  type CompanyPhoto,
 } from "../../src/api/company";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchRegionGroups, type RegionGroupHit } from "../../src/api/regions";
@@ -19,13 +20,8 @@ import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
 import { Button } from "../../src/components/Button";
 import { TextField } from "../../src/components/TextField";
+import { PhotoStack } from "../../src/components/PhotoStack";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
-
-const PHOTO_TYPE_LABEL: Record<string, string> = {
-  MAIN: "대표",
-  WORK: "작업사진",
-  BEFORE_AFTER: "전/후 비교",
-};
 
 export default function CompanyProfileScreen() {
   const [data, setData] = useState<CompanyMe | null>(null);
@@ -56,68 +52,127 @@ export default function CompanyProfileScreen() {
     return <LoadingView />;
   }
 
+  const workPhotos = data.photos.filter((p) => p.type === "WORK");
+  const beforeAfterPhotos = data.photos.filter((p) => p.type === "BEFORE_AFTER");
+
   return (
     <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
       <Text style={styles.title}>업체 프로필 관리</Text>
+      <Text style={styles.subtitle}>
+        실제 상세페이지와 똑같은 모습이에요. 사진은 탭해서 바로 등록/변경할 수 있어요.
+      </Text>
 
-      <ProfileSection company={data.company} onSaved={load} />
+      <MainPhotoSlot
+        mainImageUrl={data.company.mainImageUrl}
+        companyName={data.company.name}
+        onChanged={load}
+      />
+
+      <ProfileHeaderSection
+        company={data.company}
+        averageRating={data.averageRating}
+        reviewCount={data.reviewCount}
+      />
+
       <ServicesSection services={data.services} categories={categories} onChanged={load} />
+
+      <PhotoStackSection title="작업 사진" type="WORK" photos={workPhotos} onChanged={load} />
+      <PhotoStackSection
+        title="전/후 비교"
+        type="BEFORE_AFTER"
+        photos={beforeAfterPhotos}
+        onChanged={load}
+      />
+
       <RegionsSection
         legacyRegions={data.legacyRegions}
         selectedRegions={data.selectedRegions}
         onSaved={load}
       />
-      <PhotosSection photos={data.photos} mainImageUrl={data.company.mainImageUrl} onChanged={load} />
+
+      <InfoSection company={data.company} onSaved={load} />
     </Screen>
   );
 }
 
-function ProfileSection({
-  company,
-  onSaved,
-}: {
-  company: CompanyMe["company"];
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState(company.name);
-  const [phone, setPhone] = useState(company.phone ?? "");
-  const [introText, setIntroText] = useState(company.introText ?? "");
-  const [businessHours, setBusinessHours] = useState(company.businessHours ?? "");
-  const [isAvailable, setIsAvailable] = useState(company.isAvailable);
-  const [saving, setSaving] = useState(false);
+function useCompanyPhotoUpload(type: CompanyPhoto["type"], onChanged: () => void) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleSave() {
-    setSaving(true);
+  async function pick() {
+    setError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError("사진을 업로드하려면 앨범 접근 권한이 필요해요.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.9 });
+    if (result.canceled || !result.assets[0]) return;
+
+    setUploading(true);
     try {
-      await updateCompanyProfile({ name, phone, introText, businessHours, isAvailable });
-      onSaved();
-      Alert.alert("저장 완료", "기본 정보가 저장됐어요.");
+      const asset = result.assets[0];
+      const info = await getInfoAsync(asset.uri);
+      const size = info.exists ? (info as { size: number }).size : 0;
+      await uploadCompanyPhoto({ uri: asset.uri, name: "photo.jpg", type: "image/jpeg", size }, type);
+      onChanged();
     } catch (err) {
-      Alert.alert("저장 실패", err instanceof Error ? err.message : "저장에 실패했어요.");
+      setError(err instanceof Error ? err.message : "사진 업로드에 실패했어요.");
     } finally {
-      setSaving(false);
+      setUploading(false);
     }
   }
 
+  return { uploading, error, pick };
+}
+
+function MainPhotoSlot({
+  mainImageUrl,
+  companyName,
+  onChanged,
+}: {
+  mainImageUrl: string | null;
+  companyName: string;
+  onChanged: () => void;
+}) {
+  const { uploading, error, pick } = useCompanyPhotoUpload("MAIN", onChanged);
+
   return (
-    <Section title="기본 정보">
-      <TextField label="업체명" value={name} onChangeText={setName} />
-      <TextField label="연락처" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <TextField label="업체 소개" value={introText} onChangeText={setIntroText} multiline />
-      <TextField
-        label="영업시간"
-        value={businessHours}
-        onChangeText={setBusinessHours}
-        placeholder="예: 09:00-18:00"
-      />
+    <View style={styles.mainSlotWrap}>
+      <Pressable onPress={pick} disabled={uploading} style={styles.mainSlot}>
+        {mainImageUrl ? (
+          <Image source={{ uri: mainImageUrl }} style={styles.mainSlotImage} />
+        ) : (
+          <Text style={styles.mainSlotEmoji}>🧽</Text>
+        )}
+        <View style={styles.mainSlotOverlay}>
+          <Text style={styles.mainSlotOverlayText}>
+            {uploading ? "업로드 중..." : "탭해서 대표사진 등록/변경"}
+          </Text>
+        </View>
+      </Pressable>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+      <Text style={styles.mainSlotCaption}>{companyName}</Text>
+    </View>
+  );
+}
 
-      <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>예약 받기</Text>
-        <Switch value={isAvailable} onValueChange={setIsAvailable} />
-      </View>
-
-      <Button title="저장" onPress={handleSave} loading={saving} style={styles.saveButton} />
-    </Section>
+function ProfileHeaderSection({
+  company,
+  averageRating,
+  reviewCount,
+}: {
+  company: CompanyMe["company"];
+  averageRating: number;
+  reviewCount: number;
+}) {
+  return (
+    <View style={styles.headerSection}>
+      <Text style={styles.ratingLine}>
+        {reviewCount > 0 ? `★ ${averageRating.toFixed(1)} 리뷰 ${reviewCount}개` : "아직 리뷰가 없어요"}
+      </Text>
+      {company.introText && <Text style={styles.introPreview}>{company.introText}</Text>}
+    </View>
   );
 }
 
@@ -204,6 +259,47 @@ function ServicesSection({
         </View>
       )}
     </Section>
+  );
+}
+
+function PhotoStackSection({
+  title,
+  type,
+  photos,
+  onChanged,
+}: {
+  title: string;
+  type: "WORK" | "BEFORE_AFTER";
+  photos: CompanyPhoto[];
+  onChanged: () => void;
+}) {
+  const { uploading, error, pick } = useCompanyPhotoUpload(type, onChanged);
+
+  return (
+    <View style={styles.photoStackSection}>
+      <PhotoStack
+        title={title}
+        photos={photos}
+        photoOverlay={(photo) => (
+          <Pressable
+            onPress={() => {
+              deleteCompanyPhoto(photo.id).then(onChanged);
+            }}
+            style={styles.photoDeleteButton}
+          >
+            <Text style={styles.photoDeleteButtonText}>×</Text>
+          </Pressable>
+        )}
+        extraTile={
+          <Pressable onPress={pick} disabled={uploading} style={styles.addPhotoTile}>
+            <Text style={styles.addPhotoTileText}>
+              {uploading ? "업로드중" : "+ 사진 추가"}
+            </Text>
+          </Pressable>
+        }
+      />
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
   );
 }
 
@@ -390,86 +486,67 @@ function RegionsSection({
   );
 }
 
-function PhotosSection({
-  photos,
-  mainImageUrl,
-  onChanged,
+function InfoSection({
+  company,
+  onSaved,
 }: {
-  photos: CompanyMe["photos"];
-  mainImageUrl: string | null;
-  onChanged: () => void;
+  company: CompanyMe["company"];
+  onSaved: () => void;
 }) {
-  const [photoType, setPhotoType] = useState<"MAIN" | "WORK" | "BEFORE_AFTER">("WORK");
-  const [uploading, setUploading] = useState(false);
+  const [name, setName] = useState(company.name);
+  const [introText, setIntroText] = useState(company.introText ?? "");
+  const [phone, setPhone] = useState(company.phone ?? "");
+  const [businessHours, setBusinessHours] = useState(company.businessHours ?? "");
+  const [isAvailable, setIsAvailable] = useState(company.isAvailable);
+  const [saving, setSaving] = useState(false);
 
-  async function handlePick() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("권한 필요", "사진을 업로드하려면 앨범 접근 권한이 필요해요.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.9 });
-    if (result.canceled || !result.assets[0]) return;
-
-    setUploading(true);
+  async function handleSave() {
+    setSaving(true);
     try {
-      const asset = result.assets[0];
-      const info = await getInfoAsync(asset.uri);
-      const size = info.exists ? (info as { size: number }).size : 0;
-      await uploadCompanyPhoto(
-        { uri: asset.uri, name: "photo.jpg", type: "image/jpeg", size },
-        photoType
-      );
-      onChanged();
+      await updateCompanyProfile({ name, phone, introText, businessHours, isAvailable });
+      onSaved();
+      Alert.alert("저장 완료", "저장됐어요.");
     } catch (err) {
-      Alert.alert("업로드 실패", err instanceof Error ? err.message : "사진 업로드에 실패했어요.");
+      Alert.alert("저장 실패", err instanceof Error ? err.message : "저장에 실패했어요.");
     } finally {
-      setUploading(false);
+      setSaving(false);
     }
-  }
-
-  async function handleDelete(id: string) {
-    await deleteCompanyPhoto(id);
-    onChanged();
   }
 
   return (
-    <Section title="사진">
-      <View style={styles.photoGrid}>
-        {photos.map((photo) => (
-          <View key={photo.id} style={styles.photoCell}>
-            <Image source={{ uri: photo.url }} style={styles.photoImage} />
-            {mainImageUrl === photo.url && (
-              <View style={styles.mainBadge}>
-                <Text style={styles.mainBadgeText}>★ 대표</Text>
-              </View>
-            )}
-            <Text style={styles.photoTypeLabel}>{PHOTO_TYPE_LABEL[photo.type]}</Text>
-            <Pressable onPress={() => handleDelete(photo.id)}>
-              <Text style={styles.deleteLink}>삭제</Text>
-            </Pressable>
-          </View>
-        ))}
+    <Section title="기본 정보">
+      <TextField label="업체명" value={name} onChangeText={setName} />
+      <TextField label="업체 소개" value={introText} onChangeText={setIntroText} multiline />
+
+      <View style={styles.infoTable}>
+        <View style={[styles.infoRow, styles.infoRowDivider]}>
+          <Text style={styles.infoLabel}>영업시간</Text>
+          <TextInput
+            value={businessHours}
+            onChangeText={setBusinessHours}
+            placeholder="예: 09:00-18:00"
+            placeholderTextColor={colors.textFaint}
+            style={styles.infoInput}
+          />
+        </View>
+        <View style={[styles.infoRow, styles.infoRowDivider]}>
+          <Text style={styles.infoLabel}>예약 가능 여부</Text>
+          <Switch value={isAvailable} onValueChange={setIsAvailable} />
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>연락처</Text>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="010-0000-0000"
+            placeholderTextColor={colors.textFaint}
+            keyboardType="phone-pad"
+            style={styles.infoInput}
+          />
+        </View>
       </View>
 
-      <View style={styles.chipRow}>
-        {(["MAIN", "WORK", "BEFORE_AFTER"] as const).map((t) => (
-          <Pressable
-            key={t}
-            style={[styles.chip, photoType === t && styles.chipActive]}
-            onPress={() => setPhotoType(t)}
-          >
-            <Text style={[styles.chipText, photoType === t && styles.chipTextActive]}>
-              {PHOTO_TYPE_LABEL[t]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <Text style={styles.helperText}>
-        대표: 목록에 보이는 사진 · 작업사진: 상세페이지 하단 · 전/후 비교: 별도 섹션
-      </Text>
-
-      <Button title="사진 추가" onPress={handlePick} loading={uploading} style={styles.saveButton} />
+      <Button title="저장" onPress={handleSave} loading={saving} style={styles.saveButton} />
     </Section>
   );
 }
@@ -485,6 +562,38 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  subtitle: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textFaint },
+  mainSlotWrap: { marginTop: spacing.lg },
+  mainSlot: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  mainSlotImage: { width: "100%", height: "100%" },
+  mainSlotEmoji: { fontSize: 48 },
+  mainSlotOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingVertical: spacing.sm - 2,
+  },
+  mainSlotOverlayText: {
+    textAlign: "center",
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+    color: colors.onPrimary,
+  },
+  mainSlotCaption: { marginTop: spacing.sm, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
+  headerSection: { marginTop: spacing.xs },
+  ratingLine: { fontSize: fontSize.base, color: colors.textMuted },
+  introPreview: { marginTop: spacing.sm, fontSize: fontSize.base, color: colors.text },
+  errorText: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.danger },
   section: {
     marginTop: spacing.xl,
     borderRadius: radius.xl,
@@ -493,13 +602,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   sectionTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text },
-  switchRow: {
-    marginTop: spacing.md + 2,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  switchLabel: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
   saveButton: { marginTop: spacing.lg },
   listRow: {
     flexDirection: "row",
@@ -539,18 +641,51 @@ const styles = StyleSheet.create({
   regionGroup: { marginTop: spacing.md },
   regionGroupHeader: { paddingVertical: spacing.xs },
   regionGroupTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
-  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm + 2 },
-  photoCell: { width: 90 },
-  photoImage: { width: 90, height: 90, borderRadius: radius.md },
-  mainBadge: {
+  photoStackSection: { marginTop: spacing.md },
+  photoDeleteButton: {
     position: "absolute",
-    left: 4,
-    top: 4,
-    backgroundColor: "rgba(23,23,23,0.8)",
+    right: spacing.sm,
+    top: spacing.sm,
+    width: 28,
+    height: 28,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 2,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  mainBadgeText: { color: colors.onPrimary, fontSize: 9, fontWeight: fontWeight.semibold },
-  photoTypeLabel: { marginTop: spacing.xs, fontSize: 10, textAlign: "center", color: colors.textMuted },
+  photoDeleteButtonText: { color: colors.onPrimary, fontSize: fontSize.md, lineHeight: fontSize.md },
+  addPhotoTile: {
+    marginTop: spacing.sm,
+    height: 64,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addPhotoTileText: { fontSize: fontSize.base, color: colors.textMuted },
+  infoTable: {
+    marginTop: spacing.md + 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    gap: spacing.md,
+  },
+  infoRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  infoLabel: { fontSize: fontSize.base, color: colors.textMuted, flexShrink: 0 },
+  infoInput: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: fontSize.base,
+    color: colors.text,
+  },
 });
