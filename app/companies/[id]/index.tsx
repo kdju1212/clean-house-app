@@ -38,13 +38,14 @@ export default function CompanyDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [scrollY, setScrollY] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [barHeight, setBarHeight] = useState(0);
 
   const scrollRef = useRef<ScrollView>(null);
   const galleryScrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const lastScrollY = useRef(0);
+  const barHidden = useRef(false);
   const [barTranslateY] = useState(() => new Animated.Value(0));
   // How far the reserve bar has to travel to be fully off-screen.
   const maxBarHide = barHeight + insets.bottom + spacing.xxl;
@@ -136,18 +137,35 @@ export default function CompanyDetailScreen() {
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const y = e.nativeEvent.contentOffset.y;
-    setScrollY(y);
+    // Re-rendering this whole (fairly heavy) screen on every single scroll
+    // frame — which setScrollY(y) did — was what actually caused the
+    // animation to stutter, not the animation itself: the JS thread was
+    // busy re-rendering the screen instead of keeping up with the gesture.
+    // Only touching state when the visibility threshold is actually
+    // crossed means this re-renders twice per scroll, not sixty times.
+    const shouldShow = y > 400;
+    if (shouldShow !== showScrollTop) {
+      setShowScrollTop(shouldShow);
+    }
 
     const diff = y - lastScrollY.current;
     // Ignore tiny jitters (rubber-banding, a light finger twitch) so the
     // bar doesn't flicker — only react to an actual, deliberate scroll.
     if (Math.abs(diff) > 10) {
       const hide = diff > 0 && y > 80;
-      Animated.timing(barTranslateY, {
-        toValue: hide ? maxBarHide : 0,
-        duration: 60,
-        useNativeDriver: true,
-      }).start();
+      // Only start a new animation when the target actually flips —
+      // continuing to scroll in the same direction kept re-triggering
+      // .start() every ~10px, restarting the in-flight animation from
+      // wherever it currently was and making it look stuttery instead of
+      // one clean slide.
+      if (hide !== barHidden.current) {
+        barHidden.current = hide;
+        Animated.timing(barTranslateY, {
+          toValue: hide ? maxBarHide : 0,
+          duration: 60,
+          useNativeDriver: true,
+        }).start();
+      }
       lastScrollY.current = y;
     }
   }
@@ -341,14 +359,14 @@ export default function CompanyDetailScreen() {
       {services.length > 0 ? (
         <Animated.View style={{ transform: [{ translateY: buttonTranslateY }] }}>
           <ScrollToTopButton
-            visible={scrollY > 400}
+            visible={showScrollTop}
             bottomOffset={buttonRestingBottom}
             onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
           />
         </Animated.View>
       ) : (
         <ScrollToTopButton
-          visible={scrollY > 400}
+          visible={showScrollTop}
           onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
         />
       )}
