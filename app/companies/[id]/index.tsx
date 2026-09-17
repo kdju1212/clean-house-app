@@ -46,14 +46,18 @@ export default function CompanyDetailScreen() {
   const insets = useSafeAreaInsets();
   const lastScrollY = useRef(0);
   const [barTranslateY] = useState(() => new Animated.Value(0));
-  // How far the reserve bar has to travel to be fully off-screen — and,
-  // mirrored, how far the scroll-to-top button drops once it does, so the
-  // button always ends up sitting right where it would if there were no
-  // bar at all instead of floating in empty space above a hidden one.
+  // How far the reserve bar has to travel to be fully off-screen.
   const maxBarHide = barHeight + insets.bottom + spacing.xxl;
+  // Button's bottom edge when the bar is fully shown: exactly 7px above
+  // the bar's top edge (barHeight already includes the bar's own
+  // safe-area padding, so this is the bar's true top, not an approximation).
+  const buttonRestingBottom = barHeight + 7;
+  // Where the button belongs once the bar is fully hidden — the same
+  // spot it would sit at if there were no bar at all.
+  const buttonNoBarBottom = insets.bottom + spacing.xxl;
   const buttonTranslateY = barTranslateY.interpolate({
     inputRange: [0, maxBarHide],
-    outputRange: [0, barHeight + 7],
+    outputRange: [0, buttonRestingBottom - buttonNoBarBottom],
     extrapolate: "clamp",
   });
 
@@ -141,7 +145,7 @@ export default function CompanyDetailScreen() {
       const hide = diff > 0 && y > 80;
       Animated.timing(barTranslateY, {
         toValue: hide ? maxBarHide : 0,
-        duration: 120,
+        duration: 60,
         useNativeDriver: true,
       }).start();
       lastScrollY.current = y;
@@ -338,7 +342,7 @@ export default function CompanyDetailScreen() {
         <Animated.View style={{ transform: [{ translateY: buttonTranslateY }] }}>
           <ScrollToTopButton
             visible={scrollY > 400}
-            bottomOffset={barHeight + 7}
+            bottomOffset={buttonRestingBottom}
             onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
           />
         </Animated.View>

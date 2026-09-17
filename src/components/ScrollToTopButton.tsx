@@ -7,14 +7,17 @@ import { colors, radius, spacing } from "../theme";
  * — the screen itself tracks scroll offset (via Screen's onScroll) and
  * passes `visible`/`onPress` down, since only it holds the ScrollView ref.
  *
- * `bottomOffset` lifts it clear of anything else pinned to the bottom
- * (e.g. a sticky reserve bar) so the two never overlap — pass that bar's
- * own measured height (see app/companies/[id]/index.tsx).
+ * `bottomOffset`, when given, is the *exact* distance from the screen
+ * bottom to this button's own bottom edge — pass it as
+ * `<bar's measured height> + <desired gap>` to sit that gap above a sticky
+ * bar (see app/companies/[id]/index.tsx), since the bar's height already
+ * includes its own safe-area padding. Omit it for the plain default
+ * position (bottom safe-area inset + standard spacing).
  */
 export function ScrollToTopButton({
   visible,
   onPress,
-  bottomOffset = 0,
+  bottomOffset,
 }: {
   visible: boolean;
   onPress: () => void;
@@ -24,12 +27,10 @@ export function ScrollToTopButton({
 
   if (!visible) return null;
 
+  const bottom = bottomOffset ?? insets.bottom + spacing.xxl;
+
   return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={8}
-      style={[styles.button, { bottom: insets.bottom + spacing.xxl + bottomOffset }]}
-    >
+    <Pressable onPress={onPress} hitSlop={8} style={[styles.button, { bottom }]}>
       <Text style={styles.icon}>↑</Text>
     </Pressable>
   );
