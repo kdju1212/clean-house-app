@@ -46,6 +46,16 @@ export default function CompanyDetailScreen() {
   const insets = useSafeAreaInsets();
   const lastScrollY = useRef(0);
   const [barTranslateY] = useState(() => new Animated.Value(0));
+  // How far the reserve bar has to travel to be fully off-screen — and,
+  // mirrored, how far the scroll-to-top button drops once it does, so the
+  // button always ends up sitting right where it would if there were no
+  // bar at all instead of floating in empty space above a hidden one.
+  const maxBarHide = barHeight + insets.bottom + spacing.xxl;
+  const buttonTranslateY = barTranslateY.interpolate({
+    inputRange: [0, maxBarHide],
+    outputRange: [0, barHeight + 7],
+    extrapolate: "clamp",
+  });
 
   const load = useCallback(() => {
     return Promise.all([
@@ -130,8 +140,8 @@ export default function CompanyDetailScreen() {
     if (Math.abs(diff) > 10) {
       const hide = diff > 0 && y > 80;
       Animated.timing(barTranslateY, {
-        toValue: hide ? barHeight + insets.bottom + spacing.xxl : 0,
-        duration: 200,
+        toValue: hide ? maxBarHide : 0,
+        duration: 120,
         useNativeDriver: true,
       }).start();
       lastScrollY.current = y;
@@ -324,11 +334,20 @@ export default function CompanyDetailScreen() {
         </Animated.View>
       )}
 
-      <ScrollToTopButton
-        visible={scrollY > 400}
-        bottomOffset={services.length > 0 ? barHeight + spacing.md : 0}
-        onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-      />
+      {services.length > 0 ? (
+        <Animated.View style={{ transform: [{ translateY: buttonTranslateY }] }}>
+          <ScrollToTopButton
+            visible={scrollY > 400}
+            bottomOffset={barHeight + 7}
+            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          />
+        </Animated.View>
+      ) : (
+        <ScrollToTopButton
+          visible={scrollY > 400}
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+        />
+      )}
     </View>
   );
 }
