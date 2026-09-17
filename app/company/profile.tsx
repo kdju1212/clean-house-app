@@ -486,6 +486,81 @@ function RegionsSection({
   );
 }
 
+// 3-4-4 grouping as digits arrive, matching how a Korean mobile number
+// (010-XXXX-XXXX) is actually read — far easier to get right than typing
+// dashes by hand, and non-digits never make it into the value at all.
+function formatPhoneNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  if (digits.length < 4) return digits;
+  if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+
+const HOURS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
+const HOURS_PATTERN = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
+
+function parseBusinessHours(value: string): [string, string] {
+  if (HOURS_PATTERN.test(value)) {
+    const [start, end] = value.split("-");
+    return [start, end];
+  }
+  return ["09:00", "18:00"];
+}
+
+/** Tap-to-pick 시작/종료 시간 instead of free-text — no more typing "09:00-18:00" by hand. */
+function BusinessHoursPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [start, end] = parseBusinessHours(value);
+  const [openField, setOpenField] = useState<"start" | "end" | null>(null);
+
+  function select(hour: string) {
+    onChange(openField === "start" ? `${hour}-${end}` : `${start}-${hour}`);
+    setOpenField(null);
+  }
+
+  return (
+    <View>
+      <View style={styles.hoursRow}>
+        <Pressable
+          onPress={() => setOpenField(openField === "start" ? null : "start")}
+          style={[styles.hoursButton, openField === "start" && styles.hoursButtonActive]}
+        >
+          <Text style={styles.hoursButtonText}>{start}</Text>
+        </Pressable>
+        <Text style={styles.hoursSeparator}>~</Text>
+        <Pressable
+          onPress={() => setOpenField(openField === "end" ? null : "end")}
+          style={[styles.hoursButton, openField === "end" && styles.hoursButtonActive]}
+        >
+          <Text style={styles.hoursButtonText}>{end}</Text>
+        </Pressable>
+      </View>
+
+      {openField && (
+        <View style={styles.hoursChipGrid}>
+          {HOURS.map((h) => {
+            const active = h === (openField === "start" ? start : end);
+            return (
+              <Pressable
+                key={h}
+                onPress={() => select(h)}
+                style={[styles.hoursChip, active && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{h}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
 function InfoSection({
   company,
   onSaved,
@@ -495,7 +570,7 @@ function InfoSection({
 }) {
   const [name, setName] = useState(company.name);
   const [introText, setIntroText] = useState(company.introText ?? "");
-  const [phone, setPhone] = useState(company.phone ?? "");
+  const [phone, setPhone] = useState(company.phone ? formatPhoneNumber(company.phone) : "");
   const [businessHours, setBusinessHours] = useState(company.businessHours ?? "");
   const [isAvailable, setIsAvailable] = useState(company.isAvailable);
   const [saving, setSaving] = useState(false);
@@ -518,17 +593,10 @@ function InfoSection({
       <TextField label="업체명" value={name} onChangeText={setName} />
       <TextField label="업체 소개" value={introText} onChangeText={setIntroText} multiline />
 
+      <Text style={[styles.infoLabel, styles.hoursLabel]}>영업시간</Text>
+      <BusinessHoursPicker value={businessHours} onChange={setBusinessHours} />
+
       <View style={styles.infoTable}>
-        <View style={[styles.infoRow, styles.infoRowDivider]}>
-          <Text style={styles.infoLabel}>영업시간</Text>
-          <TextInput
-            value={businessHours}
-            onChangeText={setBusinessHours}
-            placeholder="예: 09:00-18:00"
-            placeholderTextColor={colors.textFaint}
-            style={styles.infoInput}
-          />
-        </View>
         <View style={[styles.infoRow, styles.infoRowDivider]}>
           <Text style={styles.infoLabel}>예약 가능 여부</Text>
           <Switch value={isAvailable} onValueChange={setIsAvailable} />
@@ -537,10 +605,11 @@ function InfoSection({
           <Text style={styles.infoLabel}>연락처</Text>
           <TextInput
             value={phone}
-            onChangeText={setPhone}
+            onChangeText={(text) => setPhone(formatPhoneNumber(text))}
             placeholder="010-0000-0000"
             placeholderTextColor={colors.textFaint}
-            keyboardType="phone-pad"
+            keyboardType="number-pad"
+            maxLength={13}
             style={styles.infoInput}
           />
         </View>
@@ -687,5 +756,35 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: fontSize.base,
     color: colors.text,
+  },
+  hoursLabel: { marginTop: spacing.md + 2 },
+  hoursRow: {
+    marginTop: spacing.xs + 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  hoursButton: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 1,
+  },
+  hoursButtonActive: { borderColor: colors.primary },
+  hoursButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
+  hoursSeparator: { fontSize: fontSize.base, color: colors.textFaint },
+  hoursChipGrid: {
+    marginTop: spacing.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs + 2,
+  },
+  hoursChip: {
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 1,
   },
 });

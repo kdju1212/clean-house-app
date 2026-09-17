@@ -1,7 +1,9 @@
 import { ReactNode, Ref, forwardRef } from "react";
 import {
+  KeyboardAvoidingView,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -52,20 +54,31 @@ export const Screen = forwardRef(function Screen(
 
   if (scroll) {
     return (
-      <ScrollView
-        ref={ref}
+      // Without this, a TextInput near the bottom of a form got covered by
+      // the keyboard instead of the screen making room for it — "padding"
+      // shrinks the KeyboardAvoidingView (and the ScrollView inside it) by
+      // the keyboard's height on iOS; Android handles this itself via the
+      // manifest's windowSoftInputMode, so it's a no-op there.
+      <KeyboardAvoidingView
         style={styles.container}
-        contentContainerStyle={[styles.scrollContent, basePadding, style]}
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl refreshing={refreshing ?? false} onRefresh={onRefresh} />
-          ) : undefined
-        }
-        onScroll={onScroll}
-        scrollEventThrottle={onScroll ? 16 : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {children}
-      </ScrollView>
+        <ScrollView
+          ref={ref}
+          style={styles.container}
+          contentContainerStyle={[styles.scrollContent, basePadding, style]}
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl refreshing={refreshing ?? false} onRefresh={onRefresh} />
+            ) : undefined
+          }
+          onScroll={onScroll}
+          scrollEventThrottle={onScroll ? 16 : undefined}
+          keyboardShouldPersistTaps="handled"
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   }
 
