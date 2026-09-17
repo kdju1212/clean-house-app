@@ -55,13 +55,14 @@ export const Screen = forwardRef(function Screen(
   if (scroll) {
     return (
       // Without this, a TextInput near the bottom of a form got covered by
-      // the keyboard instead of the screen making room for it — "padding"
-      // shrinks the KeyboardAvoidingView (and the ScrollView inside it) by
-      // the keyboard's height on iOS; Android handles this itself via the
-      // manifest's windowSoftInputMode, so it's a no-op there.
+      // the keyboard instead of the screen making room for it. Android's own
+      // windowSoftInputMode resize no longer happens on its own here — SDK
+      // 57's edge-to-edge display (required on Android, can't be turned off)
+      // breaks that automatic resize — so both platforms need
+      // KeyboardAvoidingView to actually shrink the container.
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
           ref={ref}
