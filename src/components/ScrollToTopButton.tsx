@@ -6,13 +6,19 @@ import { colors, radius, spacing } from "../theme";
  * Small floating circle, bottom-right, that jumps a screen back to its top
  * — the screen itself tracks scroll offset (via Screen's onScroll) and
  * passes `visible`/`onPress` down, since only it holds the ScrollView ref.
+ *
+ * `bottomOffset` lifts it clear of anything else pinned to the bottom
+ * (e.g. a sticky reserve bar) so the two never overlap — pass that bar's
+ * own measured height (see app/companies/[id]/index.tsx).
  */
 export function ScrollToTopButton({
   visible,
   onPress,
+  bottomOffset = 0,
 }: {
   visible: boolean;
   onPress: () => void;
+  bottomOffset?: number;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -22,7 +28,7 @@ export function ScrollToTopButton({
     <Pressable
       onPress={onPress}
       hitSlop={8}
-      style={[styles.button, { bottom: insets.bottom + spacing.xxl }]}
+      style={[styles.button, { bottom: insets.bottom + spacing.xxl + bottomOffset }]}
     >
       <Text style={styles.icon}>↑</Text>
     </Pressable>

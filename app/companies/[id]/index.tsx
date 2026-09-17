@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
   Linking,
@@ -38,10 +39,13 @@ export default function CompanyDetailScreen() {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
+  const [barHeight, setBarHeight] = useState(0);
 
   const scrollRef = useRef<ScrollView>(null);
   const galleryScrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+  const lastScrollY = useRef(0);
+  const [barTranslateY] = useState(() => new Animated.Value(0));
 
   const load = useCallback(() => {
     return Promise.all([
@@ -116,6 +120,24 @@ export default function CompanyDetailScreen() {
     scrollRef.current?.scrollTo({ y: 0, animated: true });
   }
 
+  function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const y = e.nativeEvent.contentOffset.y;
+    setScrollY(y);
+
+    const diff = y - lastScrollY.current;
+    // Ignore tiny jitters (rubber-banding, a light finger twitch) so the
+    // bar doesn't flicker — only react to an actual, deliberate scroll.
+    if (Math.abs(diff) > 10) {
+      const hide = diff > 0 && y > 80;
+      Animated.timing(barTranslateY, {
+        toValue: hide ? barHeight + insets.bottom + spacing.xxl : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      lastScrollY.current = y;
+    }
+  }
+
   function handleGalleryScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     setGalleryIndex(idx);
@@ -160,7 +182,7 @@ export default function CompanyDetailScreen() {
         style={{ ...styles.noPad, paddingBottom: 100 + insets.bottom }}
         refreshing={refreshing}
         onRefresh={handleRefresh}
-        onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+        onScroll={handleScroll}
       >
         {galleryPhotos.length > 0 ? (
           <View>
@@ -282,7 +304,14 @@ export default function CompanyDetailScreen() {
       </Screen>
 
       {services.length > 0 && (
-        <View style={[styles.stickyBar, { paddingBottom: insets.bottom + spacing.md }]}>
+        <Animated.View
+          onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
+          style={[
+            styles.stickyBar,
+            { paddingBottom: insets.bottom + spacing.md },
+            { transform: [{ translateY: barTranslateY }] },
+          ]}
+        >
           <View style={{ flex: 1 }}>
             <Text style={styles.stickyBarLabel}>{selectedService ? "선택한 서비스" : "시작가"}</Text>
             <Text style={styles.stickyBarPrice}>
@@ -292,11 +321,12 @@ export default function CompanyDetailScreen() {
           <Pressable style={styles.stickyBarButton} onPress={handleReserveFromBar}>
             <Text style={styles.stickyBarButtonText}>예약하기</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       )}
 
       <ScrollToTopButton
         visible={scrollY > 400}
+        bottomOffset={services.length > 0 ? barHeight + spacing.md : 0}
         onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
       />
     </View>
