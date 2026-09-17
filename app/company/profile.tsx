@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { getInfoAsync } from "expo-file-system";
+import { File } from "expo-file-system";
 import {
   fetchCompanyMe,
   updateCompanyProfile,
@@ -112,8 +112,7 @@ function useCompanyPhotoUpload(type: CompanyPhoto["type"], onChanged: () => void
     setUploading(true);
     try {
       const asset = result.assets[0];
-      const info = await getInfoAsync(asset.uri);
-      const size = info.exists ? (info as { size: number }).size : 0;
+      const size = new File(asset.uri).size;
       await uploadCompanyPhoto({ uri: asset.uri, name: "photo.jpg", type: "image/jpeg", size }, type);
       onChanged();
     } catch (err) {

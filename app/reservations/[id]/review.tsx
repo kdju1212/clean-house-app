@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { getInfoAsync } from "expo-file-system";
+import { File } from "expo-file-system";
 import { submitReview, uploadReviewPhoto } from "../../../src/api/reviews";
 import { Screen } from "../../../src/components/Screen";
 import { Button } from "../../../src/components/Button";
@@ -41,8 +41,7 @@ export default function ReviewScreen() {
     try {
       let publicId: string | null = null;
       if (photoUri) {
-        const info = await getInfoAsync(photoUri);
-        const size = info.exists ? (info as { size: number }).size : 0;
+        const size = new File(photoUri).size;
         publicId = await uploadReviewPhoto(id, {
           uri: photoUri,
           name: "review.jpg",
