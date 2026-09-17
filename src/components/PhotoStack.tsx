@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Dimensions, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Image as RNImage, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { colors, fontSize, fontWeight, radius, spacing } from "../theme";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -14,8 +15,13 @@ export type PhotoItem = { id: string; url: string };
  * ratio (never cropped to a square) and stacked with zero gap — mirrors
  * the web app's src/components/company-detail/photo-stack.tsx. RN doesn't
  * know an image's intrinsic size until it's fetched, so each photo's
- * aspect ratio is looked up via Image.getSize and applied as a style
- * (RN's `aspectRatio` behaves like the CSS property once width is set).
+ * aspect ratio is looked up via the core Image.getSize and applied as a
+ * style (RN's `aspectRatio` behaves like the CSS property once width is
+ * set). Rendering itself uses expo-image rather than core RN Image —
+ * core Image decodes a remote bitmap at whatever size its view happened
+ * to be laid out to at load time, which for a full-width, aspect-ratio-only
+ * box came out blurry (especially on Android); expo-image's own pipeline
+ * decodes at the actual target size instead.
  *
  * Collapses behind a "더 보기" button once total rendered height would
  * exceed the fold — decided from the known aspect ratios rather than a
@@ -41,7 +47,7 @@ export function PhotoStack({
   useEffect(() => {
     photos.forEach((photo) => {
       if (ratios[photo.id] != null) return;
-      Image.getSize(
+      RNImage.getSize(
         photo.url,
         (w, h) => setRatios((prev) => ({ ...prev, [photo.id]: h > 0 ? w / h : 1 })),
         () => setRatios((prev) => ({ ...prev, [photo.id]: 1 }))
@@ -71,10 +77,10 @@ export function PhotoStack({
           return (
             <View key={photo.id} style={styles.photoWrap}>
               {ratio ? (
-                <Image
+                <ExpoImage
                   source={{ uri: photo.url }}
                   style={[styles.photo, { aspectRatio: ratio }]}
-                  resizeMode="cover"
+                  contentFit="cover"
                 />
               ) : (
                 <View style={[styles.photo, styles.photoLoading]} />
