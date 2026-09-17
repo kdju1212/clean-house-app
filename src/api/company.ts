@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { toFormDataFilePart } from "./file-part";
 
 export type CompanyService = {
   id: string;
@@ -86,7 +87,7 @@ export async function uploadCompanyPhoto(
   });
 
   const formData = new FormData();
-  formData.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+  formData.append("file", await toFormDataFilePart(file));
   formData.append("public_id", signed.publicId);
   formData.append("timestamp", String(signed.timestamp));
   formData.append("api_key", signed.apiKey);

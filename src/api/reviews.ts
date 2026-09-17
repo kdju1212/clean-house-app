@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { toFormDataFilePart } from "./file-part";
 
 type SignedUploadParams = {
   cloudName: string;
@@ -24,10 +25,7 @@ export async function uploadReviewPhoto(
   );
 
   const formData = new FormData();
-  // React Native's fetch FormData accepts this {uri,name,type} shape for a
-  // file field — not a real Blob, but RN's networking layer knows how to
-  // stream it from the file:// uri.
-  formData.append("file", { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+  formData.append("file", await toFormDataFilePart(file));
   formData.append("public_id", signed.publicId);
   formData.append("timestamp", String(signed.timestamp));
   formData.append("api_key", signed.apiKey);
