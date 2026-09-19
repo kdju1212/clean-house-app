@@ -1,5 +1,7 @@
 import { apiFetch } from "./client";
+import { clearPushToken } from "./push";
 import { saveSession, clearSession, type StoredUser } from "../storage/auth-storage";
+import { registerForPushNotifications } from "../notifications";
 
 type KakaoAuthResponse = {
   token: string;
@@ -20,10 +22,22 @@ export async function loginWithKakao(kakaoAccessToken: string): Promise<StoredUs
     auth: false,
   });
   await saveSession(token, user);
+  // Not awaited — this triggers the OS permission dialog, which shouldn't
+  // block navigation away from the login screen. app/_layout.tsx's own
+  // mount effect would eventually catch this too, but only on the next
+  // cold start, so this registers it immediately on a fresh login instead.
+  void registerForPushNotifications();
   return user;
 }
 
 export async function logout(): Promise<void> {
+  try {
+    await clearPushToken();
+  } catch {
+    // Best-effort — a stale token left on the server just means this
+    // now-signed-out device could get one more notification before the
+    // next login overwrites it. Not worth blocking logout for.
+  }
   await clearSession();
 }
 
@@ -48,5 +62,6 @@ export async function loginWithTestAccount(
     auth: false,
   });
   await saveSession(token, user);
+  void registerForPushNotifications();
   return user;
 }

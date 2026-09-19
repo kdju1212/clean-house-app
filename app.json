@@ -46,6 +46,13 @@
         {
           "locationWhenInUsePermission": "내 위치로 서비스 지역을 찾기 위해 위치 정보를 사용해요."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#171717"
+        }
       ]
     ],
     "extra": {
