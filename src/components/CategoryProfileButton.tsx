@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getReservationQuestions } from "../utils/reservation-questions";
 import { saveCategoryProfile } from "../api/category-profile";
@@ -24,6 +25,7 @@ export function CategoryProfileButton({
   initialAnswers: Record<string, string> | null;
   onSaved: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const questions = getReservationQuestions(categorySlug);
   const [open, setOpen] = useState(false);
   const [showTip, setShowTip] = useState(false);
@@ -89,7 +91,7 @@ export function CategoryProfileButton({
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={styles.overlay}>
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
             <Text style={styles.sheetTitle}>내 정보 입력</Text>
             <Text style={styles.sheetHint}>
               업체 목록에서 이 정보를 기준으로 예상 가격을 보여드려요.
