@@ -308,10 +308,10 @@ function ServicesSection({
           <View style={{ flex: 1 }}>
             <Text style={styles.listRowTitle}>{s.categoryName}</Text>
             <Text style={styles.listRowMeta}>
-              {s.price.toLocaleString()}원
               {s.pricingUnit === "PER_UNIT"
-                ? `/${PRICING_UNIT_LABEL[getPricingQuantityKey(s.categorySlug) ?? ""] ?? ""}`
+                ? `${PRICING_UNIT_LABEL[getPricingQuantityKey(s.categorySlug) ?? ""] ?? ""}당 `
                 : ""}
+              {s.price.toLocaleString()}원
               {s.description ? ` · ${s.description}` : ""}
             </Text>
           </View>

@@ -39,7 +39,7 @@ export function CompanyListItem({
           {company.estimatedPrice != null
             ? `예상 ${company.estimatedPrice.toLocaleString()}원`
             : company.pricingUnit === "PER_UNIT"
-              ? `${company.price.toLocaleString()}원/${unitLabel}~`
+              ? `${unitLabel}당 ${company.price.toLocaleString()}원~`
               : `${company.price.toLocaleString()}원~`}
           {company.reviewCount > 0
             ? ` · ★ ${company.rating.toFixed(1)} (${company.reviewCount})`

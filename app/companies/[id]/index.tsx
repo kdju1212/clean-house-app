@@ -26,7 +26,18 @@ import { LoadingView } from "../../../src/components/LoadingView";
 import { PhotoStack } from "../../../src/components/PhotoStack";
 import { RatingDistribution } from "../../../src/components/RatingDistribution";
 import { ScrollToTopButton } from "../../../src/components/ScrollToTopButton";
+import { getPricingQuantityKey, PRICING_UNIT_LABEL } from "../../../src/utils/reservation-questions";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
+
+function formatServicePrice(service: CompanyDetail["services"][number]): string {
+  const unitLabel =
+    service.pricingUnit === "PER_UNIT"
+      ? PRICING_UNIT_LABEL[getPricingQuantityKey(service.categorySlug) ?? ""]
+      : null;
+  return unitLabel
+    ? `${unitLabel}당 ${service.price.toLocaleString()}원`
+    : `${service.price.toLocaleString()}원`;
+}
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -205,7 +216,7 @@ export default function CompanyDetailScreen() {
   const selectedService =
     services.find((s) => s.categoryId === selectedCategoryId) ??
     (services.length === 1 ? services[0] : null);
-  const barPrice = selectedService?.price ?? cheapest?.price ?? null;
+  const barService = selectedService ?? cheapest;
 
   return (
     <View style={styles.flex}>
@@ -280,7 +291,7 @@ export default function CompanyDetailScreen() {
                       <Text style={styles.serviceDescription}>{service.description}</Text>
                     )}
                   </View>
-                  <Text style={styles.servicePrice}>{service.price.toLocaleString()}원</Text>
+                  <Text style={styles.servicePrice}>{formatServicePrice(service)}</Text>
                 </Pressable>
               );
             })}
@@ -348,7 +359,8 @@ export default function CompanyDetailScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.stickyBarLabel}>{selectedService ? "선택한 서비스" : "시작가"}</Text>
             <Text style={styles.stickyBarPrice}>
-              {barPrice?.toLocaleString()}원{!selectedService && "~"}
+              {barService ? formatServicePrice(barService) : null}
+              {!selectedService && "~"}
             </Text>
           </View>
           <Pressable style={styles.stickyBarButton} onPress={handleReserveFromBar}>

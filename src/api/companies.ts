@@ -70,6 +70,7 @@ export type CompanyDetailService = {
   categorySlug: string;
   categoryName: string;
   price: number;
+  pricingUnit: "FLAT" | "PER_UNIT";
   description: string | null;
 };
 
