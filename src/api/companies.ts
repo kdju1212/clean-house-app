@@ -78,6 +78,7 @@ export type CompanyDetailPhoto = {
   id: string;
   url: string;
   type: "MAIN" | "WORK" | "BEFORE_AFTER";
+  categoryId: string | null;
 };
 
 export type CompanyReview = {

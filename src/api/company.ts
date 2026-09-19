@@ -19,6 +19,9 @@ export type CompanyPhoto = {
   id: string;
   url: string;
   type: "MAIN" | "WORK" | "BEFORE_AFTER";
+  // Which category this photo belongs to (WORK/BEFORE_AFTER only) — null
+  // means "shown for every category". See clean_house's CompanyPhoto model.
+  categoryId: string | null;
 };
 
 export type CompanyMe = {
@@ -87,7 +90,8 @@ type SignedUploadParams = {
  * Cloudinary, then confirm so the server can re-verify/re-encode it. */
 export async function uploadCompanyPhoto(
   file: { uri: string; name: string; type: string; size: number },
-  photoType: CompanyPhoto["type"]
+  photoType: CompanyPhoto["type"],
+  categoryId?: string | null
 ): Promise<void> {
   const signed = await apiFetch<SignedUploadParams>("/api/mobile/company/photos/upload-url", {
     method: "POST",
@@ -111,7 +115,7 @@ export async function uploadCompanyPhoto(
 
   await apiFetch("/api/mobile/company/photos", {
     method: "POST",
-    body: { publicId: signed.publicId, type: photoType },
+    body: { publicId: signed.publicId, type: photoType, categoryId },
   });
 }
 

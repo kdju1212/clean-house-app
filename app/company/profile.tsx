@@ -82,11 +82,18 @@ export default function CompanyProfileScreen() {
 
       <ServicesSection services={data.services} categories={categories} onChanged={load} />
 
-      <PhotoStackSection title="작업 사진" type="WORK" photos={workPhotos} onChanged={load} />
+      <PhotoStackSection
+        title="작업 사진"
+        type="WORK"
+        photos={workPhotos}
+        services={data.services}
+        onChanged={load}
+      />
       <PhotoStackSection
         title="전/후 비교"
         type="BEFORE_AFTER"
         photos={beforeAfterPhotos}
+        services={data.services}
         onChanged={load}
       />
 
@@ -116,6 +123,7 @@ function getImageDimensions(uri: string): Promise<{ width: number; height: numbe
 
 function useCompanyPhotoUpload(
   type: CompanyPhoto["type"],
+  categoryId: string | null,
   onChanged: () => void,
   options?: { requireSquare?: boolean }
 ) {
@@ -153,7 +161,11 @@ function useCompanyPhotoUpload(
     setUploading(true);
     try {
       const size = new File(asset.uri).size;
-      await uploadCompanyPhoto({ uri: asset.uri, name: "photo.jpg", type: "image/jpeg", size }, type);
+      await uploadCompanyPhoto(
+        { uri: asset.uri, name: "photo.jpg", type: "image/jpeg", size },
+        type,
+        categoryId
+      );
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "사진 업로드에 실패했어요.");
@@ -174,7 +186,7 @@ function MainPhotoSlot({
   companyName: string;
   onChanged: () => void;
 }) {
-  const { uploading, error, pick } = useCompanyPhotoUpload("MAIN", onChanged, {
+  const { uploading, error, pick } = useCompanyPhotoUpload("MAIN", null, onChanged, {
     requireSquare: true,
   });
 
@@ -397,29 +409,74 @@ function PhotoStackSection({
   title,
   type,
   photos,
+  services,
   onChanged,
 }: {
   title: string;
   type: "WORK" | "BEFORE_AFTER";
   photos: CompanyPhoto[];
+  // Offered as "이 사진, 어떤 카테고리 사진인가요?" tag choices — only one
+  // registered service means there's nothing to distinguish, so the
+  // selector (and each photo's tag badge) stays hidden.
+  services: CompanyMe["services"];
   onChanged: () => void;
 }) {
-  const { uploading, error, pick } = useCompanyPhotoUpload(type, onChanged);
+  const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(null);
+  const { uploading, error, pick } = useCompanyPhotoUpload(type, uploadCategoryId, onChanged);
+  const categoryName = (id: string | null) =>
+    id ? services.find((s) => s.categoryId === id)?.categoryName ?? "" : "전체 공통";
 
   return (
     <View style={styles.photoStackSection}>
+      {services.length > 1 && (
+        <View style={styles.chipRow}>
+          <Pressable
+            style={[styles.chip, uploadCategoryId === null && styles.chipActive]}
+            onPress={() => setUploadCategoryId(null)}
+          >
+            <Text style={[styles.chipText, uploadCategoryId === null && styles.chipTextActive]}>
+              전체 공통
+            </Text>
+          </Pressable>
+          {services.map((s) => (
+            <Pressable
+              key={s.categoryId}
+              style={[styles.chip, uploadCategoryId === s.categoryId && styles.chipActive]}
+              onPress={() => setUploadCategoryId(s.categoryId)}
+            >
+              <Text
+                style={[
+                  styles.chipText,
+                  uploadCategoryId === s.categoryId && styles.chipTextActive,
+                ]}
+              >
+                {s.categoryName}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
       <PhotoStack
         title={title}
         photos={photos}
         photoOverlay={(photo) => (
-          <Pressable
-            onPress={() => {
-              deleteCompanyPhoto(photo.id).then(onChanged);
-            }}
-            style={styles.photoDeleteButton}
-          >
-            <Text style={styles.photoDeleteButtonText}>×</Text>
-          </Pressable>
+          <>
+            {services.length > 1 && (
+              <View style={styles.photoTag}>
+                <Text style={styles.photoTagText}>
+                  {categoryName((photo as CompanyPhoto).categoryId)}
+                </Text>
+              </View>
+            )}
+            <Pressable
+              onPress={() => {
+                deleteCompanyPhoto(photo.id).then(onChanged);
+              }}
+              style={styles.photoDeleteButton}
+            >
+              <Text style={styles.photoDeleteButtonText}>×</Text>
+            </Pressable>
+          </>
         )}
         extraTile={
           <Pressable onPress={pick} disabled={uploading} style={styles.addPhotoTile}>
@@ -834,6 +891,16 @@ const styles = StyleSheet.create({
   regionGroupHeader: { paddingVertical: spacing.xs },
   regionGroupTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
   photoStackSection: { marginTop: spacing.md },
+  photoTag: {
+    position: "absolute",
+    left: spacing.sm,
+    bottom: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  photoTagText: { fontSize: fontSize.xs, color: colors.onPrimary },
   photoDeleteButton: {
     position: "absolute",
     right: spacing.sm,

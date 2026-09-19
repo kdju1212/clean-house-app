@@ -21,6 +21,7 @@ export default function CategoriesScreen() {
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [region, setRegion] = useState<StoredRegion | null>(null);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [activeCategoryName, setActiveCategoryName] = useState<string | null>(null);
   const [categoryProfile, setCategoryProfile] = useState<Record<string, string> | null>(null);
   const [allProfiles, setAllProfiles] = useState<Record<string, Record<string, string>>>({});
@@ -45,6 +46,7 @@ export default function CategoriesScreen() {
     if (slug === null) {
       const result = await searchAllCompanies({ regionId });
       if (requestIdRef.current !== requestId) return; // a newer tap already superseded this one
+      setActiveCategoryId(null);
       setActiveCategoryName(null);
       setCategoryProfile(null);
       setRows(result.rows);
@@ -54,6 +56,7 @@ export default function CategoriesScreen() {
         fetchCategoryProfile(slug).catch(() => null),
       ]);
       if (requestIdRef.current !== requestId) return;
+      setActiveCategoryId(result.category.id);
       setActiveCategoryName(result.category.name);
       setCategoryProfile(profile);
       setRows([...result.adRows.map((r) => ({ ...r, isAd: true })), ...result.rows]);
@@ -173,7 +176,12 @@ export default function CategoriesScreen() {
             />
           }
           renderItem={({ item }) => (
-            <CompanyListItem company={item} isAd={item.isAd} unitLabel={unitLabel} />
+            <CompanyListItem
+              company={item}
+              isAd={item.isAd}
+              unitLabel={unitLabel}
+              categoryId={activeCategoryId ?? undefined}
+            />
           )}
         />
       )}

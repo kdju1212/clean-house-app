@@ -42,13 +42,21 @@ function formatServicePrice(service: CompanyDetail["services"][number]): string 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
 export default function CompanyDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, categoryId: initialCategoryId } = useLocalSearchParams<{
+    id: string;
+    // Set by CompanyListItem's link when arriving from a specific
+    // category, so this screen opens already showing that category's own
+    // 소개/사진 instead of the company's general ones.
+    categoryId?: string;
+  }>();
   const [data, setData] = useState<CompanyDetail | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    initialCategoryId ?? null
+  );
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [barHeight, setBarHeight] = useState(0);
 
@@ -205,10 +213,6 @@ export default function CompanyDetailScreen() {
         ...photos.filter((p) => p.url !== mainPhoto),
       ]
     : photos;
-  const workPhotos = photos.filter((p) => p.type === "WORK");
-  const beforeAfterPhotos = photos.filter((p) => p.type === "BEFORE_AFTER");
-  const reviewPhotos = reviews.filter((r) => r.photoUrl);
-
   const cheapest = services.reduce<CompanyDetail["services"][number] | null>(
     (min, s) => (!min || s.price < min.price ? s : min),
     null
@@ -217,6 +221,16 @@ export default function CompanyDetailScreen() {
     services.find((s) => s.categoryId === selectedCategoryId) ??
     (services.length === 1 ? services[0] : null);
   const barService = selectedService ?? cheapest;
+
+  // Untagged photos (categoryId null) show for every category — a
+  // company that never bothers tagging anything keeps working exactly
+  // like before this feature existed.
+  const matchesSelected = (photo: CompanyDetail["photos"][number]) =>
+    photo.categoryId === null || photo.categoryId === selectedService?.categoryId;
+  const workPhotos = photos.filter((p) => p.type === "WORK" && matchesSelected(p));
+  const beforeAfterPhotos = photos.filter((p) => p.type === "BEFORE_AFTER" && matchesSelected(p));
+  const reviewPhotos = reviews.filter((r) => r.photoUrl);
+  const introText = selectedService?.description || company.introText;
 
   return (
     <View style={styles.flex}>
@@ -274,7 +288,7 @@ export default function CompanyDetailScreen() {
           <Text style={styles.ratingLine}>
             {reviewCount > 0 ? `★ ${averageRating.toFixed(1)} 리뷰 ${reviewCount}개` : "아직 리뷰가 없어요"}
           </Text>
-          {company.introText && <Text style={styles.intro}>{company.introText}</Text>}
+          {introText && <Text style={styles.intro}>{introText}</Text>}
 
           <Section title="서비스 · 가격">
             {services.map((service) => {

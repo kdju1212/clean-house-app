@@ -11,16 +11,26 @@ export function CompanyListItem({
   company,
   isAd,
   unitLabel,
+  categoryId,
 }: {
   company: CompanyRow;
   isAd?: boolean;
   /** "평" / "대" — only meaningful when company.pricingUnit is PER_UNIT. */
   unitLabel?: string;
+  /** Which category this row was listed under — carried into the detail
+   * screen so it opens already showing that category's own 소개/사진
+   * instead of the company's general ones. Omitted on the "전체" tab. */
+  categoryId?: string;
 }) {
   return (
     <Pressable
       style={styles.card}
-      onPress={() => router.push({ pathname: "/companies/[id]", params: { id: company.id } })}
+      onPress={() =>
+        router.push({
+          pathname: "/companies/[id]",
+          params: categoryId ? { id: company.id, categoryId } : { id: company.id },
+        })
+      }
     >
       {company.mainImageUrl ? (
         <Image source={{ uri: company.mainImageUrl }} style={styles.thumb} />
