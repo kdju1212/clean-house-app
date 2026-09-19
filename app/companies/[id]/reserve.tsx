@@ -5,6 +5,7 @@ import * as Location from "expo-location";
 import { createReservation } from "../../../src/api/reservations";
 import { fetchAddressByCoords } from "../../../src/api/address";
 import { getSelectedRegion, getStoredUser, updateStoredPhone } from "../../../src/storage/auth-storage";
+import { getReservationQuestions } from "../../../src/utils/reservation-questions";
 import { Screen } from "../../../src/components/Screen";
 import { Button } from "../../../src/components/Button";
 import { TextField } from "../../../src/components/TextField";
@@ -27,8 +28,10 @@ export default function ReserveScreen() {
     id: string;
     name: string;
     categoryId: string;
+    categorySlug: string;
     price: string;
   }>();
+  const questions = getReservationQuestions(params.categorySlug ?? "");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -37,6 +40,7 @@ export default function ReserveScreen() {
   const [desiredDate, setDesiredDate] = useState("");
   const [desiredTime, setDesiredTime] = useState<string | null>(null);
   const [requestNote, setRequestNote] = useState("");
+  const [categoryAnswers, setCategoryAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
@@ -83,6 +87,12 @@ export default function ReserveScreen() {
       return;
     }
 
+    const missing = questions.find((q) => q.required && !categoryAnswers[q.key]?.trim());
+    if (missing) {
+      Alert.alert("알림", `${missing.label} 항목을 입력해주세요.`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const region = await getSelectedRegion();
@@ -102,6 +112,7 @@ export default function ReserveScreen() {
         desiredDate,
         desiredTime,
         requestNote: requestNote || undefined,
+        categoryAnswers: questions.length > 0 ? categoryAnswers : undefined,
       });
 
       await updateStoredPhone(phone);
@@ -178,6 +189,50 @@ export default function ReserveScreen() {
         ))}
       </View>
 
+      {questions.length > 0 && (
+        <View style={styles.questionsBox}>
+          <Text style={styles.questionsHint}>
+            업체가 정확한 견적을 낼 수 있도록 아래 정보를 알려주세요.
+          </Text>
+          {questions.map((q) =>
+            q.type === "select" ? (
+              <View key={q.key}>
+                <Text style={styles.label}>{q.label}</Text>
+                <View style={styles.timeGrid}>
+                  {q.options?.map((option) => {
+                    const selected = categoryAnswers[q.key] === option;
+                    return (
+                      <Pressable
+                        key={option}
+                        style={[styles.timeChip, selected && styles.timeChipSelected]}
+                        onPress={() =>
+                          setCategoryAnswers((prev) => ({ ...prev, [q.key]: option }))
+                        }
+                      >
+                        <Text style={[styles.timeChipText, selected && styles.timeChipTextSelected]}>
+                          {option}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : (
+              <TextField
+                key={q.key}
+                label={q.required ? q.label : `${q.label} (선택)`}
+                value={categoryAnswers[q.key] ?? ""}
+                onChangeText={(text) =>
+                  setCategoryAnswers((prev) => ({ ...prev, [q.key]: text }))
+                }
+                placeholder={q.placeholder}
+                keyboardType={q.type === "number" ? "number-pad" : "default"}
+              />
+            )
+          )}
+        </View>
+      )}
+
       <TextField
         label="요청사항 (선택)"
         value={requestNote}
@@ -199,6 +254,14 @@ export default function ReserveScreen() {
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   subtitle: { marginTop: 2, fontSize: fontSize.base, color: colors.textMuted },
+  questionsBox: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  questionsHint: { fontSize: fontSize.xs, color: colors.textFaint },
   label: {
     marginTop: spacing.md,
     marginBottom: spacing.xs + 2,

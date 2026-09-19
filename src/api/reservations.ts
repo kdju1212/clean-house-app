@@ -32,6 +32,7 @@ export type CreateReservationInput = {
   desiredDate: string; // YYYY-MM-DD
   desiredTime: string; // one of TIME_SLOTS, e.g. "09:00"
   requestNote?: string;
+  categoryAnswers?: Record<string, string>;
 };
 
 /**

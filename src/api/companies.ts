@@ -36,6 +36,7 @@ export async function searchCompanies(params: {
 export type CompanyDetailService = {
   id: string;
   categoryId: string;
+  categorySlug: string;
   categoryName: string;
   price: number;
   description: string | null;

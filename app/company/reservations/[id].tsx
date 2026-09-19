@@ -6,6 +6,7 @@ import {
   transitionReservation,
   type CompanyReservationDetail,
 } from "../../../src/api/company";
+import { getReservationQuestions } from "../../../src/utils/reservation-questions";
 import { Screen } from "../../../src/components/Screen";
 import { LoadingView } from "../../../src/components/LoadingView";
 import { Card } from "../../../src/components/Card";
@@ -82,6 +83,15 @@ export default function CompanyReservationDetailScreen() {
           label="주소"
           value={`${reservation.address}${reservation.addressDetail ? ` ${reservation.addressDetail}` : ""}`}
         />
+        {reservation.categoryAnswers && (
+          <View style={styles.noteBlock}>
+            <Text style={styles.rowLabel}>견적 정보</Text>
+            {getReservationQuestions(reservation.categorySlug).map((q) => {
+              const value = reservation.categoryAnswers?.[q.key];
+              return value ? <Row key={q.key} label={q.label} value={value} /> : null;
+            })}
+          </View>
+        )}
         {reservation.requestNote && (
           <View style={styles.noteBlock}>
             <Text style={styles.rowLabel}>요청사항</Text>

@@ -132,7 +132,11 @@ export async function fetchCompanyReservations(status?: string): Promise<Company
   return reservations;
 }
 
-export type CompanyReservationDetail = CompanyReservation & { requestNote: string | null };
+export type CompanyReservationDetail = CompanyReservation & {
+  requestNote: string | null;
+  categorySlug: string;
+  categoryAnswers: Record<string, string> | null;
+};
 
 export async function fetchCompanyReservationDetail(
   id: string
