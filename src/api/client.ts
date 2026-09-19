@@ -3,7 +3,7 @@ import { getStoredToken } from "../storage/auth-storage";
 // Expo inlines any EXPO_PUBLIC_* env var into the JS bundle at build time —
 // see .env.example. Falls back to the local web dev server so `npm start`
 // works out of the box against `npm run dev` in the clean_house web repo.
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export class ApiError extends Error {
   status: number;

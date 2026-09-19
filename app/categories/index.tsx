@@ -85,6 +85,9 @@ export default function CategoriesScreen() {
           <Pressable onPress={() => router.push("/reservations")}>
             <Text style={styles.myReservations}>내 예약</Text>
           </Pressable>
+          <Pressable onPress={() => router.push("/mypage")}>
+            <Text style={styles.myReservations}>마이페이지</Text>
+          </Pressable>
           <Pressable onPress={handleLogout}>
             <Text style={styles.logout}>로그아웃</Text>
           </Pressable>
