@@ -7,6 +7,11 @@ export type CompanyRow = {
   isAvailable: boolean;
   introText: string | null;
   price: number;
+  pricingUnit: "FLAT" | "PER_UNIT";
+  // price * the customer's saved CategoryProfile quantity, when both a
+  // PER_UNIT price and a saved profile exist — see searchCompaniesInCategory
+  // on the web repo.
+  estimatedPrice: number | null;
   rating: number;
   reviewCount: number;
   regionNames: string[];
@@ -19,6 +24,12 @@ export type CompanySearchResponse = {
   rows: CompanyRow[];
 };
 
+/**
+ * No auth required to browse, but the request still carries the bearer
+ * token when one is stored (apiFetch's default) so a logged-in customer's
+ * saved CategoryProfile is used to compute a PER_UNIT service's
+ * estimatedPrice, same reasoning as fetchCompanyDetail's isFavorited below.
+ */
 export async function searchCompanies(params: {
   slug: string;
   regionId: string;
@@ -28,8 +39,7 @@ export async function searchCompanies(params: {
   if (params.maxPrice) query.set("maxPrice", String(params.maxPrice));
 
   return apiFetch<CompanySearchResponse>(
-    `/api/mobile/categories/${params.slug}/companies?${query.toString()}`,
-    { auth: false }
+    `/api/mobile/categories/${params.slug}/companies?${query.toString()}`
   );
 }
 

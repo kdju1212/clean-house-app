@@ -7,7 +7,16 @@ import type { CompanyRow } from "../api/companies";
 /** Shared by the categories screen's "전체" tab and each category's own
  * list — same card, since a customer browsing either sees the same kind
  * of row (see src/components/company-list-card.tsx on the web repo). */
-export function CompanyListItem({ company, isAd }: { company: CompanyRow; isAd?: boolean }) {
+export function CompanyListItem({
+  company,
+  isAd,
+  unitLabel,
+}: {
+  company: CompanyRow;
+  isAd?: boolean;
+  /** "평" / "대" — only meaningful when company.pricingUnit is PER_UNIT. */
+  unitLabel?: string;
+}) {
   return (
     <Pressable
       style={styles.card}
@@ -27,7 +36,11 @@ export function CompanyListItem({ company, isAd }: { company: CompanyRow; isAd?:
           {company.introText ?? ""}
         </Text>
         <Text style={styles.cardMeta}>
-          {company.price.toLocaleString()}원~
+          {company.estimatedPrice != null
+            ? `예상 ${company.estimatedPrice.toLocaleString()}원`
+            : company.pricingUnit === "PER_UNIT"
+              ? `${company.price.toLocaleString()}원/${unitLabel}~`
+              : `${company.price.toLocaleString()}원~`}
           {company.reviewCount > 0
             ? ` · ★ ${company.rating.toFixed(1)} (${company.reviewCount})`
             : " · 리뷰 없음"}

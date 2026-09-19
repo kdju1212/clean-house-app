@@ -16,6 +16,7 @@ import {
 } from "../../src/api/company";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchRegionGroups, type RegionGroupHit } from "../../src/api/regions";
+import { getPricingQuantityKey, PRICING_UNIT_LABEL } from "../../src/utils/reservation-questions";
 import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
 import { Button } from "../../src/components/Button";
@@ -225,9 +226,14 @@ function ServicesSection({
   const availableCategories = categories.filter((c) => !usedCategoryIds.has(c.id));
 
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [pricingUnit, setPricingUnit] = useState<"FLAT" | "PER_UNIT">("FLAT");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const selectedSlug = availableCategories.find((c) => c.id === categoryId)?.slug;
+  const quantityKey = selectedSlug ? getPricingQuantityKey(selectedSlug) : undefined;
+  const unitLabel = quantityKey ? PRICING_UNIT_LABEL[quantityKey] : null;
 
   async function handleAdd() {
     if (!categoryId) {
@@ -236,8 +242,14 @@ function ServicesSection({
     }
     setSaving(true);
     try {
-      await saveService({ categoryId, price: Number(price), description });
+      await saveService({
+        categoryId,
+        price: Number(price),
+        description,
+        pricingUnit: unitLabel ? pricingUnit : "FLAT",
+      });
       setCategoryId(null);
+      setPricingUnit("FLAT");
       setPrice("");
       setDescription("");
       onChanged();
@@ -260,7 +272,11 @@ function ServicesSection({
           <View style={{ flex: 1 }}>
             <Text style={styles.listRowTitle}>{s.categoryName}</Text>
             <Text style={styles.listRowMeta}>
-              {s.price.toLocaleString()}원{s.description ? ` · ${s.description}` : ""}
+              {s.price.toLocaleString()}원
+              {s.pricingUnit === "PER_UNIT"
+                ? `/${PRICING_UNIT_LABEL[getPricingQuantityKey(s.categorySlug) ?? ""] ?? ""}`
+                : ""}
+              {s.description ? ` · ${s.description}` : ""}
             </Text>
           </View>
           <Pressable onPress={() => handleDelete(s.id)}>
@@ -284,10 +300,32 @@ function ServicesSection({
               </Pressable>
             ))}
           </View>
+          {unitLabel && (
+            <View style={styles.chipRow}>
+              <Pressable
+                style={[styles.chip, pricingUnit === "FLAT" && styles.chipActive]}
+                onPress={() => setPricingUnit("FLAT")}
+              >
+                <Text style={[styles.chipText, pricingUnit === "FLAT" && styles.chipTextActive]}>
+                  고정가
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.chip, pricingUnit === "PER_UNIT" && styles.chipActive]}
+                onPress={() => setPricingUnit("PER_UNIT")}
+              >
+                <Text
+                  style={[styles.chipText, pricingUnit === "PER_UNIT" && styles.chipTextActive]}
+                >
+                  {unitLabel}당 단가
+                </Text>
+              </Pressable>
+            </View>
+          )}
           <TextField
             value={price}
             onChangeText={setPrice}
-            placeholder="가격 (원)"
+            placeholder={unitLabel ? `가격 (원) — 고정가 또는 ${unitLabel}당 단가` : "가격 (원)"}
             keyboardType="number-pad"
           />
           <TextField value={description} onChangeText={setDescription} placeholder="설명 (선택)" />

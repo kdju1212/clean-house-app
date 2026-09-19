@@ -4,8 +4,10 @@ import { toFormDataFilePart } from "./file-part";
 export type CompanyService = {
   id: string;
   categoryId: string;
+  categorySlug: string;
   categoryName: string;
   price: number;
+  pricingUnit: "FLAT" | "PER_UNIT";
   description: string | null;
 };
 
@@ -54,6 +56,7 @@ export async function saveService(input: {
   categoryId: string;
   price: number;
   description: string;
+  pricingUnit?: "FLAT" | "PER_UNIT";
 }): Promise<void> {
   await apiFetch("/api/mobile/company/services", { method: "POST", body: input });
 }

@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as Location from "expo-location";
 import { createReservation } from "../../../src/api/reservations";
 import { fetchAddressByCoords } from "../../../src/api/address";
+import { fetchCategoryProfile } from "../../../src/api/category-profile";
 import { getSelectedRegion, getStoredUser, updateStoredPhone } from "../../../src/storage/auth-storage";
 import { getReservationQuestions } from "../../../src/utils/reservation-questions";
 import { Screen } from "../../../src/components/Screen";
@@ -58,6 +59,18 @@ export default function ReserveScreen() {
       if (user.phone) setPhone(user.phone);
     });
   }, []);
+
+  useEffect(() => {
+    if (!params.categorySlug || questions.length === 0) return;
+    // Pre-fills 평수/브랜드/형태/대수 etc. from whatever the customer saved
+    // via the categories screen's "정보입력" button, so they don't have to
+    // retype it here too — same saved CategoryProfile either flow uses.
+    fetchCategoryProfile(params.categorySlug)
+      .then((saved) => {
+        if (saved) setCategoryAnswers(saved);
+      })
+      .catch(() => {});
+  }, [params.categorySlug, questions.length]);
 
   async function handleLocateAddress() {
     setLocateError(null);
