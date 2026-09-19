@@ -10,6 +10,11 @@ export type ReservationQuestion = {
   options?: string[];
   placeholder?: string;
   required: boolean;
+  // A "select" question with more than one answer allowed (e.g. 에어컨
+  // 형태 — a customer might have both a 벽걸이형 and a 스탠드형 unit to
+  // clean). Stored as the selected options joined with "," in the same
+  // string value every other question uses.
+  multiple?: boolean;
 };
 
 const AREA_QUESTIONS: ReservationQuestion[] = [
@@ -32,6 +37,7 @@ export const CATEGORY_QUESTIONS: Record<string, ReservationQuestion[]> = {
       type: "select",
       options: ["벽걸이형", "스탠드형", "시스템에어컨", "창문형"],
       required: true,
+      multiple: true,
     },
     { key: "count", label: "대수", type: "number", placeholder: "예: 2", required: true },
   ],

@@ -156,14 +156,28 @@ export function CategoryProfileButton({
               {questions.map((q) =>
                 q.type === "select" ? (
                   <View key={q.key} style={styles.field}>
-                    <Text style={styles.fieldLabel}>{q.label}</Text>
+                    <Text style={styles.fieldLabel}>
+                      {q.label}
+                      {q.multiple ? " (복수 선택 가능)" : ""}
+                    </Text>
                     <View style={styles.optionsRow}>
                       {q.options?.map((option) => {
-                        const active = values[q.key] === option;
+                        const active = q.multiple
+                          ? (values[q.key] ?? "").split(",").includes(option)
+                          : values[q.key] === option;
                         return (
                           <Pressable
                             key={option}
-                            onPress={() => setValues((prev) => ({ ...prev, [q.key]: option }))}
+                            onPress={() =>
+                              setValues((prev) => {
+                                if (!q.multiple) return { ...prev, [q.key]: option };
+                                const current = (prev[q.key] ?? "").split(",").filter(Boolean);
+                                const next = current.includes(option)
+                                  ? current.filter((v) => v !== option)
+                                  : [...current, option];
+                                return { ...prev, [q.key]: next.join(",") };
+                              })
+                            }
                             style={[styles.optionChip, active && styles.optionChipActive]}
                           >
                             <Text

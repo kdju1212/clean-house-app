@@ -93,7 +93,9 @@ export default function CompanyReservationDetailScreen() {
             <Text style={styles.rowLabel}>견적 정보</Text>
             {getReservationQuestions(reservation.categorySlug).map((q) => {
               const value = reservation.categoryAnswers?.[q.key];
-              return value ? <Row key={q.key} label={q.label} value={value} /> : null;
+              return value ? (
+                <Row key={q.key} label={q.label} value={value.split(",").join(", ")} />
+              ) : null;
             })}
           </View>
         )}

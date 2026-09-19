@@ -210,16 +210,25 @@ export default function ReserveScreen() {
           {questions.map((q) =>
             q.type === "select" ? (
               <View key={q.key}>
-                <Text style={styles.label}>{q.label}</Text>
+                <Text style={styles.label}>{q.label}{q.multiple ? " (복수 선택 가능)" : ""}</Text>
                 <View style={styles.timeGrid}>
                   {q.options?.map((option) => {
-                    const selected = categoryAnswers[q.key] === option;
+                    const selected = q.multiple
+                      ? (categoryAnswers[q.key] ?? "").split(",").includes(option)
+                      : categoryAnswers[q.key] === option;
                     return (
                       <Pressable
                         key={option}
                         style={[styles.timeChip, selected && styles.timeChipSelected]}
                         onPress={() =>
-                          setCategoryAnswers((prev) => ({ ...prev, [q.key]: option }))
+                          setCategoryAnswers((prev) => {
+                            if (!q.multiple) return { ...prev, [q.key]: option };
+                            const current = (prev[q.key] ?? "").split(",").filter(Boolean);
+                            const next = current.includes(option)
+                              ? current.filter((v) => v !== option)
+                              : [...current, option];
+                            return { ...prev, [q.key]: next.join(",") };
+                          })
                         }
                       >
                         <Text style={[styles.timeChipText, selected && styles.timeChipTextSelected]}>
