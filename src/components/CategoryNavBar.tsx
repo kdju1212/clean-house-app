@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
-import { router } from "expo-router";
 import { colors, fontSize, fontWeight, radius, spacing } from "../theme";
 
 const EMOJI_BY_SLUG: Record<string, string> = {
@@ -19,10 +18,11 @@ type Layout = { x: number; width: number };
 
 /**
  * Danggeun-style horizontal category bar — mirrors the web home page's
- * CategoryNavBar. "전체" (activeSlug null) replaces to /categories, each
- * category replaces to /categories/[slug] — replace() rather than push()
- * since these are sibling filters of the same screen, not a drill-down, so
- * bouncing between them shouldn't pile up the back stack.
+ * CategoryNavBar. Unlike the web version, this doesn't navigate to a
+ * different route: switching categories here is a plain state update the
+ * parent screen owns (onSelect), so the list refetches in place instead of
+ * the screen unmounting/remounting through expo-router — that remount was
+ * what made switching categories feel like a full reload.
  *
  * RN's ScrollView has no DOM scrollIntoView, so the active pill's own
  * onLayout position is tracked and scrolled to manually once both the
@@ -31,9 +31,11 @@ type Layout = { x: number; width: number };
 export function CategoryNavBar({
   categories,
   activeSlug,
+  onSelect,
 }: {
   categories: { slug: string; name: string }[];
   activeSlug: string | null;
+  onSelect: (slug: string | null) => void;
 }) {
   const scrollRef = useRef<ScrollView>(null);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -62,7 +64,7 @@ export function CategoryNavBar({
       <Pill
         label="전체"
         active={activeSlug === null}
-        onPress={() => router.replace("/categories")}
+        onPress={() => onSelect(null)}
         onLayout={(layout) => handleItemLayout("all", layout)}
       />
       {categories.map((c) => (
@@ -70,9 +72,7 @@ export function CategoryNavBar({
           key={c.slug}
           label={`${EMOJI_BY_SLUG[c.slug] ?? "🧽"} ${c.name}`}
           active={activeSlug === c.slug}
-          onPress={() =>
-            router.replace({ pathname: "/categories/[slug]", params: { slug: c.slug } })
-          }
+          onPress={() => onSelect(c.slug)}
           onLayout={(layout) => handleItemLayout(c.slug, layout)}
         />
       ))}
