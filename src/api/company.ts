@@ -151,10 +151,11 @@ export type ReservationAction = "accept" | "reject" | "complete";
 
 export async function transitionReservation(
   id: string,
-  action: ReservationAction
+  action: ReservationAction,
+  price?: number
 ): Promise<void> {
   await apiFetch(`/api/mobile/company/reservations/${id}/transition`, {
     method: "POST",
-    body: { action },
+    body: { action, price },
   });
 }

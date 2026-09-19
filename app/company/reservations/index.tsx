@@ -115,10 +115,9 @@ export default function CompanyReservationsScreen() {
             {item.status === "REQUESTED" && (
               <View style={styles.actions}>
                 <Button
-                  title="승인"
+                  title="견적 확인 후 승인"
                   size="sm"
-                  onPress={() => handleAction(item.id, "accept")}
-                  loading={busyId === item.id}
+                  onPress={() => router.push(`/company/reservations/${item.id}`)}
                 />
                 <Button
                   title="거절"

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   fetchCompanyReservationDetail,
@@ -12,7 +12,7 @@ import { LoadingView } from "../../../src/components/LoadingView";
 import { Card } from "../../../src/components/Card";
 import { Badge } from "../../../src/components/Badge";
 import { Button } from "../../../src/components/Button";
-import { colors, fontSize, fontWeight, spacing } from "../../../src/theme";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
 
 const STATUS_LABEL: Record<CompanyReservationDetail["status"], string> = {
   REQUESTED: "예약 신청",
@@ -25,11 +25,15 @@ const STATUS_LABEL: Record<CompanyReservationDetail["status"], string> = {
 export default function CompanyReservationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [reservation, setReservation] = useState<CompanyReservationDetail | null>(null);
+  const [priceInput, setPriceInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(() => {
-    return fetchCompanyReservationDetail(id).then(setReservation);
+    return fetchCompanyReservationDetail(id).then((data) => {
+      setReservation(data);
+      setPriceInput(data.price != null ? String(data.price) : "");
+    });
   }, [id]);
 
   useFocusEffect(
@@ -50,7 +54,8 @@ export default function CompanyReservationDetailScreen() {
   async function handleAction(action: "accept" | "reject" | "complete") {
     setBusy(true);
     try {
-      await transitionReservation(id, action);
+      const price = action === "accept" && priceInput.trim() ? Number(priceInput) : undefined;
+      await transitionReservation(id, action, price);
       load();
     } finally {
       setBusy(false);
@@ -99,6 +104,19 @@ export default function CompanyReservationDetailScreen() {
           </View>
         )}
       </Card>
+
+      {reservation.status === "REQUESTED" && (
+        <>
+          <Text style={styles.hint}>견적 정보를 확인하고 실제 가격에 맞게 조정한 다음 승인해주세요.</Text>
+          <TextInput
+            value={priceInput}
+            onChangeText={setPriceInput}
+            placeholder="가격"
+            keyboardType="number-pad"
+            style={styles.priceInput}
+          />
+        </>
+      )}
 
       <View style={styles.actions}>
         <Button
@@ -149,5 +167,16 @@ const styles = StyleSheet.create({
   rowValue: { fontSize: fontSize.base, fontWeight: fontWeight.medium, textAlign: "right", flexShrink: 1, color: colors.text },
   noteBlock: { borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: spacing.sm + 2, gap: spacing.xs },
   noteText: { fontSize: fontSize.base, color: colors.text },
+  hint: { marginTop: spacing.lg, fontSize: fontSize.sm, color: colors.textMuted },
+  priceInput: {
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 1,
+    fontSize: fontSize.md,
+    color: colors.text,
+  },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.lg },
 });
