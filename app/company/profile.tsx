@@ -21,6 +21,7 @@ import { LoadingView } from "../../src/components/LoadingView";
 import { Button } from "../../src/components/Button";
 import { TextField } from "../../src/components/TextField";
 import { PhotoStack } from "../../src/components/PhotoStack";
+import { formatPhoneNumber } from "../../src/utils/phone";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 export default function CompanyProfileScreen() {
@@ -95,7 +96,24 @@ export default function CompanyProfileScreen() {
   );
 }
 
-function useCompanyPhotoUpload(type: CompanyPhoto["type"], onChanged: () => void) {
+/** Falls back to Image.getSize when the picker doesn't hand back dimensions
+ * itself (its own docs note width/height "can be 0 if the system did not
+ * provide" them). */
+function getImageDimensions(uri: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    Image.getSize(
+      uri,
+      (width, height) => resolve({ width, height }),
+      (error) => reject(error instanceof Error ? error : new Error(String(error)))
+    );
+  });
+}
+
+function useCompanyPhotoUpload(
+  type: CompanyPhoto["type"],
+  onChanged: () => void,
+  options?: { requireSquare?: boolean }
+) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,9 +127,26 @@ function useCompanyPhotoUpload(type: CompanyPhoto["type"], onChanged: () => void
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.9 });
     if (result.canceled || !result.assets[0]) return;
 
+    const asset = result.assets[0];
+
+    if (options?.requireSquare) {
+      try {
+        const { width, height } =
+          asset.width && asset.height
+            ? { width: asset.width, height: asset.height }
+            : await getImageDimensions(asset.uri);
+        if (width !== height) {
+          setError("대표사진은 1:1(정사각형) 비율의 이미지만 등록할 수 있어요.");
+          return;
+        }
+      } catch {
+        setError("이미지를 불러올 수 없어요. 다른 사진으로 다시 시도해주세요.");
+        return;
+      }
+    }
+
     setUploading(true);
     try {
-      const asset = result.assets[0];
       const size = new File(asset.uri).size;
       await uploadCompanyPhoto({ uri: asset.uri, name: "photo.jpg", type: "image/jpeg", size }, type);
       onChanged();
@@ -134,7 +169,9 @@ function MainPhotoSlot({
   companyName: string;
   onChanged: () => void;
 }) {
-  const { uploading, error, pick } = useCompanyPhotoUpload("MAIN", onChanged);
+  const { uploading, error, pick } = useCompanyPhotoUpload("MAIN", onChanged, {
+    requireSquare: true,
+  });
 
   return (
     <View style={styles.mainSlotWrap}>
@@ -483,16 +520,6 @@ function RegionsSection({
       <Button title="저장" onPress={handleSave} loading={saving} style={styles.saveButton} />
     </Section>
   );
-}
-
-// 3-4-4 grouping as digits arrive, matching how a Korean mobile number
-// (010-XXXX-XXXX) is actually read — far easier to get right than typing
-// dashes by hand, and non-digits never make it into the value at all.
-function formatPhoneNumber(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 11);
-  if (digits.length < 4) return digits;
-  if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
