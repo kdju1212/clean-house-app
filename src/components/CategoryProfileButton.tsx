@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getReservationQuestions } from "../utils/reservation-questions";
@@ -90,52 +100,60 @@ export function CategoryProfileButton({
       )}
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
             <Text style={styles.sheetTitle}>내 정보 입력</Text>
             <Text style={styles.sheetHint}>
               업체 목록에서 이 정보를 기준으로 예상 가격을 보여드려요.
             </Text>
 
-            {questions.map((q) =>
-              q.type === "select" ? (
-                <View key={q.key} style={styles.field}>
-                  <Text style={styles.fieldLabel}>{q.label}</Text>
-                  <View style={styles.optionsRow}>
-                    {q.options?.map((option) => {
-                      const active = values[q.key] === option;
-                      return (
-                        <Pressable
-                          key={option}
-                          onPress={() => setValues((prev) => ({ ...prev, [q.key]: option }))}
-                          style={[styles.optionChip, active && styles.optionChipActive]}
-                        >
-                          <Text
-                            style={[styles.optionChipText, active && styles.optionChipTextActive]}
+            <ScrollView keyboardShouldPersistTaps="handled" style={styles.fieldsScroll}>
+              {questions.map((q) =>
+                q.type === "select" ? (
+                  <View key={q.key} style={styles.field}>
+                    <Text style={styles.fieldLabel}>{q.label}</Text>
+                    <View style={styles.optionsRow}>
+                      {q.options?.map((option) => {
+                        const active = values[q.key] === option;
+                        return (
+                          <Pressable
+                            key={option}
+                            onPress={() => setValues((prev) => ({ ...prev, [q.key]: option }))}
+                            style={[styles.optionChip, active && styles.optionChipActive]}
                           >
-                            {option}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
+                            <Text
+                              style={[
+                                styles.optionChipText,
+                                active && styles.optionChipTextActive,
+                              ]}
+                            >
+                              {option}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
                   </View>
-                </View>
-              ) : (
-                <View key={q.key} style={styles.field}>
-                  <Text style={styles.fieldLabel}>{q.label}</Text>
-                  <TextInput
-                    value={values[q.key] ?? ""}
-                    onChangeText={(text) => setValues((prev) => ({ ...prev, [q.key]: text }))}
-                    placeholder={q.placeholder}
-                    placeholderTextColor={colors.textFaint}
-                    keyboardType={q.type === "number" ? "number-pad" : "default"}
-                    style={styles.input}
-                  />
-                </View>
-              )
-            )}
+                ) : (
+                  <View key={q.key} style={styles.field}>
+                    <Text style={styles.fieldLabel}>{q.label}</Text>
+                    <TextInput
+                      value={values[q.key] ?? ""}
+                      onChangeText={(text) => setValues((prev) => ({ ...prev, [q.key]: text }))}
+                      placeholder={q.placeholder}
+                      placeholderTextColor={colors.textFaint}
+                      keyboardType={q.type === "number" ? "number-pad" : "default"}
+                      style={styles.input}
+                    />
+                  </View>
+                )
+              )}
 
-            {error && <Text style={styles.errorText}>{error}</Text>}
+              {error && <Text style={styles.errorText}>{error}</Text>}
+            </ScrollView>
 
             <View style={styles.actions}>
               <Pressable
@@ -153,7 +171,7 @@ export function CategoryProfileButton({
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -202,6 +220,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
   sheetHint: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textFaint },
+  fieldsScroll: { maxHeight: 320 },
   field: { marginTop: spacing.md },
   fieldLabel: {
     marginBottom: spacing.xs + 2,
