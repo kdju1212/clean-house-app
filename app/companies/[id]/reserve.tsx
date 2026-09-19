@@ -263,6 +263,11 @@ export default function ReserveScreen() {
         multiline
       />
 
+      <Text style={styles.policyHint}>
+        예약 시간에 연락 없이 방문하지 않으면 노쇼로 처리될 수 있어요. 취소하실 경우
+        업체에 미리 연락해주세요.
+      </Text>
+
       <Button
         title="예약 신청하기"
         onPress={handleSubmit}
@@ -322,5 +327,6 @@ const styles = StyleSheet.create({
   timeChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   timeChipText: { fontSize: fontSize.base, color: "#404040" },
   timeChipTextSelected: { color: colors.onPrimary },
-  submitButton: { marginTop: spacing.xxl + spacing.xs },
+  policyHint: { marginTop: spacing.lg, fontSize: fontSize.xs, color: colors.textFaint },
+  submitButton: { marginTop: spacing.sm },
 });

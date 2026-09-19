@@ -19,6 +19,7 @@ const STATUS_LABEL: Record<CompanyReservation["status"], string> = {
   REJECTED: "거절됨",
   CANCELLED: "취소됨",
   COMPLETED: "완료",
+  NO_SHOW: "노쇼",
 };
 
 const STATUS_FILTERS = [
@@ -26,6 +27,7 @@ const STATUS_FILTERS = [
   { value: "REQUESTED", label: "신규" },
   { value: "ACCEPTED", label: "승인됨" },
   { value: "COMPLETED", label: "완료" },
+  { value: "NO_SHOW", label: "노쇼" },
 ] as const;
 
 export default function CompanyReservationsScreen() {
@@ -53,7 +55,7 @@ export default function CompanyReservationsScreen() {
     }
   }
 
-  async function handleAction(id: string, action: "accept" | "reject" | "complete") {
+  async function handleAction(id: string, action: "accept" | "reject" | "complete" | "no_show") {
     setBusyId(id);
     try {
       await transitionReservation(id, action);
@@ -136,6 +138,13 @@ export default function CompanyReservationsScreen() {
                   variant="outline"
                   onPress={() => handleAction(item.id, "complete")}
                   loading={busyId === item.id}
+                />
+                <Button
+                  title="노쇼 처리"
+                  size="sm"
+                  variant="danger"
+                  onPress={() => handleAction(item.id, "no_show")}
+                  disabled={busyId === item.id}
                 />
               </View>
             )}

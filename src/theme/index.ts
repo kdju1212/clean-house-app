@@ -19,6 +19,8 @@ export const colors = {
   dangerBg: "#fef2f2",
   warning: "#a16207",
   warningBg: "#fef3c7",
+  info: "#1d4ed8",
+  infoBg: "#dbeafe",
   star: "#f59e0b",
   kakao: "#FEE500",
   onKakao: "#191919",

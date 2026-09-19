@@ -125,7 +125,7 @@ export async function deleteCompanyPhoto(id: string): Promise<void> {
 
 export type CompanyReservation = {
   id: string;
-  status: "REQUESTED" | "ACCEPTED" | "REJECTED" | "CANCELLED" | "COMPLETED";
+  status: "REQUESTED" | "ACCEPTED" | "REJECTED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
   customerName: string;
   customerPhone: string;
   categoryName: string;
@@ -159,7 +159,7 @@ export async function fetchCompanyReservationDetail(
   return reservation;
 }
 
-export type ReservationAction = "accept" | "reject" | "complete";
+export type ReservationAction = "accept" | "reject" | "complete" | "no_show";
 
 export async function transitionReservation(
   id: string,

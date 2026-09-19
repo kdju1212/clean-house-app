@@ -1,7 +1,7 @@
 import { StyleSheet, Text, TextStyle } from "react-native";
 import { colors, fontSize, fontWeight, radius, spacing } from "../theme";
 
-type Tone = "neutral" | "warning";
+type Tone = "neutral" | "warning" | "info";
 
 export function Badge({
   label,
@@ -30,4 +30,5 @@ const styles = StyleSheet.create({
 const toneStyles = StyleSheet.create({
   neutral: { color: colors.textMuted, backgroundColor: colors.surfaceMuted },
   warning: { color: colors.warning, backgroundColor: colors.warningBg },
+  info: { color: colors.info, backgroundColor: colors.infoBg },
 });

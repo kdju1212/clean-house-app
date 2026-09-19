@@ -20,6 +20,7 @@ const STATUS_LABEL: Record<CompanyReservationDetail["status"], string> = {
   REJECTED: "거절됨",
   CANCELLED: "취소됨",
   COMPLETED: "완료",
+  NO_SHOW: "노쇼",
 };
 
 export default function CompanyReservationDetailScreen() {
@@ -51,7 +52,7 @@ export default function CompanyReservationDetailScreen() {
     }
   }
 
-  async function handleAction(action: "accept" | "reject" | "complete") {
+  async function handleAction(action: "accept" | "reject" | "complete" | "no_show") {
     setBusy(true);
     try {
       const price = action === "accept" && priceInput.trim() ? Number(priceInput) : undefined;
@@ -139,12 +140,20 @@ export default function CompanyReservationDetailScreen() {
           </>
         )}
         {reservation.status === "ACCEPTED" && (
-          <Button
-            title="청소 완료 처리"
-            variant="danger"
-            onPress={() => handleAction("complete")}
-            disabled={busy}
-          />
+          <>
+            <Button
+              title="청소 완료 처리"
+              variant="outline"
+              onPress={() => handleAction("complete")}
+              disabled={busy}
+            />
+            <Button
+              title="노쇼 처리"
+              variant="danger"
+              onPress={() => handleAction("no_show")}
+              disabled={busy}
+            />
+          </>
         )}
       </View>
     </Screen>

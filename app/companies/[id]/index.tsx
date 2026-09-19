@@ -23,6 +23,7 @@ import {
 import { getStoredToken } from "../../../src/storage/auth-storage";
 import { Screen } from "../../../src/components/Screen";
 import { LoadingView } from "../../../src/components/LoadingView";
+import { Badge } from "../../../src/components/Badge";
 import { PhotoStack } from "../../../src/components/PhotoStack";
 import { RatingDistribution } from "../../../src/components/RatingDistribution";
 import { ScrollToTopButton } from "../../../src/components/ScrollToTopButton";
@@ -280,7 +281,10 @@ export default function CompanyDetailScreen() {
 
         <View style={styles.body}>
           <View style={styles.headerRow}>
-            <Text style={styles.name}>{company.name}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{company.name}</Text>
+              {company.isVerified && <Badge label="인증" tone="info" />}
+            </View>
             <Pressable onPress={handleToggleFavorite} disabled={togglingFavorite} hitSlop={8}>
               <Text style={styles.favoriteIcon}>{isFavorited ? "♥" : "♡"}</Text>
             </Pressable>
@@ -453,6 +457,7 @@ const styles = StyleSheet.create({
   galleryPlaceholderEmoji: { fontSize: 48 },
   body: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  nameRow: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm - 2, flexShrink: 1 },
   name: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text, flexShrink: 1 },
   favoriteIcon: { fontSize: 26, color: colors.danger },
   ratingLine: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.textMuted },

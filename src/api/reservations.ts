@@ -2,7 +2,7 @@ import { apiFetch } from "./client";
 
 export type MyReservation = {
   id: string;
-  status: "REQUESTED" | "ACCEPTED" | "REJECTED" | "CANCELLED" | "COMPLETED";
+  status: "REQUESTED" | "ACCEPTED" | "REJECTED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
   companyId: string;
   companyName: string;
   categoryName: string;

@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<MyReservation["status"], string> = {
   REJECTED: "거절됨",
   CANCELLED: "취소됨",
   COMPLETED: "완료",
+  NO_SHOW: "노쇼",
 };
 
 export default function MyReservationsScreen() {

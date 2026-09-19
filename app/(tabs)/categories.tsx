@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchAllCompanies, searchCompanies, type CompanyRow } from "../../src/api/companies";
@@ -13,7 +21,7 @@ import { EmptyState } from "../../src/components/EmptyState";
 import { CategoryNavBar } from "../../src/components/CategoryNavBar";
 import { CategoryProfileButton } from "../../src/components/CategoryProfileButton";
 import { CompanyListItem } from "../../src/components/CompanyListItem";
-import { colors, fontSize, fontWeight, spacing } from "../../src/theme";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 type Row = CompanyRow & { isAd?: boolean };
 
@@ -27,7 +35,16 @@ export default function CategoriesScreen() {
   const [allProfiles, setAllProfiles] = useState<Record<string, Record<string, string>>>({});
   const [rows, setRows] = useState<Row[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [queryInput, setQueryInput] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const requestIdRef = useRef(0);
+
+  // Same 250ms debounce as the region search on the company profile
+  // screen — avoids firing a request on every keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(queryInput.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [queryInput]);
 
   const loadAllProfiles = useCallback(() => {
     fetchAllCategoryProfiles()
@@ -40,11 +57,11 @@ export default function CategoriesScreen() {
   // route, which remounted the screen and showed a full loading spinner on
   // every tap; this way the header/nav bar never disappear and only the
   // list itself refetches, which is what actually makes it feel instant.
-  const loadRows = useCallback(async (regionId: string, slug: string | null) => {
+  const loadRows = useCallback(async (regionId: string, slug: string | null, query: string) => {
     const requestId = ++requestIdRef.current;
 
     if (slug === null) {
-      const result = await searchAllCompanies({ regionId });
+      const result = await searchAllCompanies({ regionId, query: query || undefined });
       if (requestIdRef.current !== requestId) return; // a newer tap already superseded this one
       setActiveCategoryId(null);
       setActiveCategoryName(null);
@@ -52,7 +69,7 @@ export default function CategoriesScreen() {
       setRows(result.rows);
     } else {
       const [result, profile] = await Promise.all([
-        searchCompanies({ slug, regionId }),
+        searchCompanies({ slug, regionId, query: query || undefined }),
         fetchCategoryProfile(slug).catch(() => null),
       ]);
       if (requestIdRef.current !== requestId) return;
@@ -100,8 +117,8 @@ export default function CategoriesScreen() {
     // list visible until the new one arrives (fetches are quick) avoids a
     // flash of the inline spinner on every tap, which is what made
     // switching feel instant instead of a reload.
-    loadRows(region.id, activeSlug);
-  }, [region, activeSlug, loadRows]);
+    loadRows(region.id, activeSlug, debouncedQuery);
+  }, [region, activeSlug, debouncedQuery, loadRows]);
 
   async function handleLogout() {
     await logout();
@@ -112,7 +129,7 @@ export default function CategoriesScreen() {
     if (!region) return;
     setRefreshing(true);
     try {
-      await loadRows(region.id, activeSlug);
+      await loadRows(region.id, activeSlug, debouncedQuery);
     } finally {
       setRefreshing(false);
     }
@@ -145,6 +162,14 @@ export default function CategoriesScreen() {
         <CategoryNavBar categories={categories} activeSlug={activeSlug} onSelect={setActiveSlug} />
       </View>
 
+      <TextInput
+        value={queryInput}
+        onChangeText={setQueryInput}
+        placeholder="업체 이름으로 검색"
+        placeholderTextColor={colors.textFaint}
+        style={styles.searchInput}
+      />
+
       {activeSlug && (
         <View style={styles.categoryRow}>
           <Text style={styles.categoryTitle}>{activeCategoryName}</Text>
@@ -154,7 +179,7 @@ export default function CategoriesScreen() {
             otherProfiles={allProfiles}
             categories={categories}
             onSaved={() => {
-              loadRows(region.id, activeSlug);
+              loadRows(region.id, activeSlug, debouncedQuery);
               loadAllProfiles();
             }}
           />
@@ -208,6 +233,16 @@ const styles = StyleSheet.create({
   headerActions: { alignItems: "flex-end", gap: spacing.sm },
   logout: { fontSize: fontSize.sm, color: colors.textFaint },
   navBar: { marginTop: spacing.lg },
+  searchInput: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.base,
+    color: colors.text,
+  },
   list: { marginTop: spacing.md },
   inlineLoading: { marginTop: spacing.xxl },
 });

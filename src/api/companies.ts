@@ -5,6 +5,7 @@ export type CompanyRow = {
   name: string;
   mainImageUrl: string | null;
   isAvailable: boolean;
+  isVerified: boolean;
   introText: string | null;
   price: number;
   pricingUnit: "FLAT" | "PER_UNIT";
@@ -34,9 +35,11 @@ export async function searchCompanies(params: {
   slug: string;
   regionId: string;
   maxPrice?: number;
+  query?: string;
 }): Promise<CompanySearchResponse> {
   const query = new URLSearchParams({ regionId: params.regionId });
   if (params.maxPrice) query.set("maxPrice", String(params.maxPrice));
+  if (params.query) query.set("q", params.query);
 
   return apiFetch<CompanySearchResponse>(
     `/api/mobile/categories/${params.slug}/companies?${query.toString()}`
@@ -54,9 +57,11 @@ export type CompanySearchAllResponse = {
 export async function searchAllCompanies(params: {
   regionId: string;
   maxPrice?: number;
+  query?: string;
 }): Promise<CompanySearchAllResponse> {
   const query = new URLSearchParams({ regionId: params.regionId });
   if (params.maxPrice) query.set("maxPrice", String(params.maxPrice));
+  if (params.query) query.set("q", params.query);
 
   return apiFetch<CompanySearchAllResponse>(
     `/api/mobile/companies/all?${query.toString()}`,
@@ -98,6 +103,7 @@ export type CompanyDetail = {
     introText: string | null;
     businessHours: string | null;
     isAvailable: boolean;
+    isVerified: boolean;
     mainImageUrl: string | null;
   };
   services: CompanyDetailService[];
