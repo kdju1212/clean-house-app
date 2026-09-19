@@ -9,6 +9,10 @@ export type CompanyService = {
   price: number;
   pricingUnit: "FLAT" | "PER_UNIT";
   description: string | null;
+  // Missing key = no restriction for that select-type question (handles
+  // every option) — see reservation-questions.ts and clean_house's
+  // addServiceForOwner.
+  supportedOptions: Record<string, string[]> | null;
 };
 
 export type CompanyPhoto = {
@@ -57,6 +61,7 @@ export async function saveService(input: {
   price: number;
   description: string;
   pricingUnit?: "FLAT" | "PER_UNIT";
+  supportedOptions?: Record<string, string[]>;
 }): Promise<void> {
   await apiFetch("/api/mobile/company/services", { method: "POST", body: input });
 }

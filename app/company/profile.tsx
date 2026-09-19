@@ -16,7 +16,11 @@ import {
 } from "../../src/api/company";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchRegionGroups, type RegionGroupHit } from "../../src/api/regions";
-import { getPricingQuantityKey, PRICING_UNIT_LABEL } from "../../src/utils/reservation-questions";
+import {
+  getPricingQuantityKey,
+  getReservationQuestions,
+  PRICING_UNIT_LABEL,
+} from "../../src/utils/reservation-questions";
 import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
 import { Button } from "../../src/components/Button";
@@ -229,15 +233,45 @@ function ServicesSection({
   const [pricingUnit, setPricingUnit] = useState<"FLAT" | "PER_UNIT">("FLAT");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [supportedOptions, setSupportedOptions] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
 
   const selectedSlug = availableCategories.find((c) => c.id === categoryId)?.slug;
   const quantityKey = selectedSlug ? getPricingQuantityKey(selectedSlug) : undefined;
   const unitLabel = quantityKey ? PRICING_UNIT_LABEL[quantityKey] : null;
+  const selectQuestions = selectedSlug
+    ? getReservationQuestions(selectedSlug).filter((q) => q.type === "select" && q.options)
+    : [];
+
+  function selectCategory(id: string, slug: string) {
+    setCategoryId(id);
+    // Every option starts checked — "이 업체가 다 청소할 수 있다"는 게
+    // 기본값이고, 특정 형태를 못 하는 업체만 체크를 해제하면 됨.
+    const defaults: Record<string, string[]> = {};
+    for (const q of getReservationQuestions(slug).filter((q) => q.type === "select" && q.options)) {
+      defaults[q.key] = [...(q.options ?? [])];
+    }
+    setSupportedOptions(defaults);
+  }
+
+  function toggleOption(key: string, option: string) {
+    setSupportedOptions((prev) => {
+      const current = prev[key] ?? [];
+      const next = current.includes(option)
+        ? current.filter((v) => v !== option)
+        : [...current, option];
+      return { ...prev, [key]: next };
+    });
+  }
 
   async function handleAdd() {
     if (!categoryId) {
       Alert.alert("알림", "청소 종류를 선택해주세요.");
+      return;
+    }
+    const missing = selectQuestions.find((q) => (supportedOptions[q.key] ?? []).length === 0);
+    if (missing) {
+      Alert.alert("알림", `처리 가능한 ${missing.label}을(를) 최소 1개는 선택해주세요.`);
       return;
     }
     setSaving(true);
@@ -247,11 +281,13 @@ function ServicesSection({
         price: Number(price),
         description,
         pricingUnit: unitLabel ? pricingUnit : "FLAT",
+        supportedOptions,
       });
       setCategoryId(null);
       setPricingUnit("FLAT");
       setPrice("");
       setDescription("");
+      setSupportedOptions({});
       onChanged();
     } catch (err) {
       Alert.alert("저장 실패", err instanceof Error ? err.message : "저장에 실패했어요.");
@@ -292,7 +328,7 @@ function ServicesSection({
               <Pressable
                 key={c.id}
                 style={[styles.chip, categoryId === c.id && styles.chipActive]}
-                onPress={() => setCategoryId(c.id)}
+                onPress={() => selectCategory(c.id, c.slug)}
               >
                 <Text style={[styles.chipText, categoryId === c.id && styles.chipTextActive]}>
                   {c.name}
@@ -300,6 +336,27 @@ function ServicesSection({
               </Pressable>
             ))}
           </View>
+          {selectQuestions.map((q) => (
+            <View key={q.key} style={styles.selectQuestionBlock}>
+              <Text style={styles.selectQuestionLabel}>처리 가능한 {q.label}</Text>
+              <View style={styles.chipRow}>
+                {q.options?.map((option) => {
+                  const active = (supportedOptions[q.key] ?? []).includes(option);
+                  return (
+                    <Pressable
+                      key={option}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => toggleOption(q.key, option)}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
           {unitLabel && (
             <View style={styles.chipRow}>
               <Pressable
@@ -749,6 +806,8 @@ const styles = StyleSheet.create({
   listRowMeta: { marginTop: 2, fontSize: fontSize.sm, color: colors.textMuted },
   deleteLink: { fontSize: fontSize.sm, color: colors.textFaint, textDecorationLine: "underline" },
   addForm: { marginTop: spacing.md + 2, borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: spacing.md + 2 },
+  selectQuestionBlock: { marginTop: spacing.sm + 2 },
+  selectQuestionLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs + 2, marginTop: spacing.xs + 2 },
   chip: {
     borderRadius: radius.pill,
