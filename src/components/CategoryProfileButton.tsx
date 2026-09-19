@@ -29,14 +29,31 @@ const TIP_SEEN_KEY = "categoryProfileTipSeen";
 export function CategoryProfileButton({
   categorySlug,
   initialAnswers,
+  otherProfiles = {},
+  categories = [],
   onSaved,
 }: {
   categorySlug: string;
   initialAnswers: Record<string, string> | null;
+  // Every other category the customer already saved a profile for, keyed
+  // by slug — offered as a "불러오기" shortcut when it shares at least one
+  // question with this category, same as the web version. Never
+  // auto-saved; picking one only pre-fills this form.
+  otherProfiles?: Record<string, Record<string, string>>;
+  categories?: { slug: string; name: string }[];
   onSaved: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const questions = getReservationQuestions(categorySlug);
+  const questionKeys = new Set(questions.map((q) => q.key));
+  const importCandidates = categories
+    .filter((c) => c.slug !== categorySlug)
+    .map((c) => ({ category: c, profile: otherProfiles[c.slug] }))
+    .filter(
+      (c): c is { category: { slug: string; name: string }; profile: Record<string, string> } =>
+        !!c.profile && Object.keys(c.profile).some((key) => questionKeys.has(key))
+    );
+
   const [open, setOpen] = useState(false);
   const [showTip, setShowTip] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -66,6 +83,16 @@ export function CategoryProfileButton({
     setValues(initialAnswers ?? {});
     dismissTip();
     setOpen(true);
+  }
+
+  function importFrom(profile: Record<string, string>) {
+    setValues((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(profile)) {
+        if (questionKeys.has(key)) next[key] = profile[key];
+      }
+      return next;
+    });
   }
 
   async function handleSave() {
@@ -109,6 +136,21 @@ export function CategoryProfileButton({
             <Text style={styles.sheetHint}>
               업체 목록에서 이 정보를 기준으로 예상 가격을 보여드려요.
             </Text>
+
+            {importCandidates.length > 0 && (
+              <View style={styles.importRow}>
+                <Text style={styles.importLabel}>불러오기:</Text>
+                {importCandidates.map(({ category, profile }) => (
+                  <Pressable
+                    key={category.slug}
+                    onPress={() => importFrom(profile)}
+                    style={styles.importChip}
+                  >
+                    <Text style={styles.importChipText}>{category.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
 
             <ScrollView keyboardShouldPersistTaps="handled" style={styles.fieldsScroll}>
               {questions.map((q) =>
@@ -220,6 +262,22 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
   sheetHint: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textFaint },
+  importRow: {
+    marginTop: spacing.sm + 2,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+  },
+  importLabel: { fontSize: fontSize.xs, color: colors.textFaint },
+  importChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 1,
+  },
+  importChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.medium, color: colors.textMuted },
   fieldsScroll: { maxHeight: 320 },
   field: { marginTop: spacing.md },
   fieldLabel: {

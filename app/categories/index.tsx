@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { router, useFocusEffect } from "expo-router";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchAllCompanies, searchCompanies, type CompanyRow } from "../../src/api/companies";
-import { fetchCategoryProfile } from "../../src/api/category-profile";
+import { fetchCategoryProfile, fetchAllCategoryProfiles } from "../../src/api/category-profile";
 import { getSelectedRegion, type StoredRegion } from "../../src/storage/auth-storage";
 import { logout } from "../../src/api/auth";
 import { getPricingQuantityKey, PRICING_UNIT_LABEL } from "../../src/utils/reservation-questions";
@@ -23,9 +23,16 @@ export default function CategoriesScreen() {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [activeCategoryName, setActiveCategoryName] = useState<string | null>(null);
   const [categoryProfile, setCategoryProfile] = useState<Record<string, string> | null>(null);
+  const [allProfiles, setAllProfiles] = useState<Record<string, Record<string, string>>>({});
   const [rows, setRows] = useState<Row[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const requestIdRef = useRef(0);
+
+  const loadAllProfiles = useCallback(() => {
+    fetchAllCategoryProfiles()
+      .then(setAllProfiles)
+      .catch(() => {});
+  }, []);
 
   // Tapping a category pill is a plain state change (activeSlug), never a
   // navigation — switching tabs used to router.replace() to a different
@@ -81,6 +88,8 @@ export default function CategoriesScreen() {
       loadCategories();
     }, [categories, loadCategories])
   );
+
+  useFocusEffect(loadAllProfiles);
 
   useEffect(() => {
     if (!region) return;
@@ -145,7 +154,12 @@ export default function CategoriesScreen() {
           <CategoryProfileButton
             categorySlug={activeSlug}
             initialAnswers={categoryProfile}
-            onSaved={() => loadRows(region.id, activeSlug)}
+            otherProfiles={allProfiles}
+            categories={categories}
+            onSaved={() => {
+              loadRows(region.id, activeSlug);
+              loadAllProfiles();
+            }}
           />
         </View>
       )}
