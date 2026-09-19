@@ -132,12 +132,6 @@ export default function CategoriesScreen() {
           </Pressable>
         </View>
         <View style={styles.headerActions}>
-          <Pressable onPress={() => router.push("/reservations")}>
-            <Text style={styles.myReservations}>내 예약</Text>
-          </Pressable>
-          <Pressable onPress={() => router.push("/mypage")}>
-            <Text style={styles.myReservations}>마이페이지</Text>
-          </Pressable>
           <Pressable onPress={handleLogout}>
             <Text style={styles.logout}>로그아웃</Text>
           </Pressable>
@@ -204,7 +198,6 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   headerActions: { alignItems: "flex-end", gap: spacing.sm },
-  myReservations: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
   logout: { fontSize: fontSize.sm, color: colors.textFaint },
   navBar: { marginTop: spacing.lg },
   list: { marginTop: spacing.md },

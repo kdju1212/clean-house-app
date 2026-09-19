@@ -1,17 +1,17 @@
 import { useCallback, useState } from "react";
 import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { fetchMyPage, updateMyPhone, type MyPageData } from "../src/api/mypage";
-import { toggleCompanyFavorite } from "../src/api/companies";
-import { logout } from "../src/api/auth";
-import { updateStoredPhone } from "../src/storage/auth-storage";
-import { API_BASE_URL } from "../src/api/client";
-import { formatPhoneNumber } from "../src/utils/phone";
-import { Screen } from "../src/components/Screen";
-import { LoadingView } from "../src/components/LoadingView";
-import { Card } from "../src/components/Card";
-import { Button } from "../src/components/Button";
-import { colors, fontSize, fontWeight, radius, spacing } from "../src/theme";
+import { fetchMyPage, updateMyPhone, type MyPageData } from "../../src/api/mypage";
+import { toggleCompanyFavorite } from "../../src/api/companies";
+import { logout } from "../../src/api/auth";
+import { updateStoredPhone } from "../../src/storage/auth-storage";
+import { API_BASE_URL } from "../../src/api/client";
+import { formatPhoneNumber } from "../../src/utils/phone";
+import { Screen } from "../../src/components/Screen";
+import { LoadingView } from "../../src/components/LoadingView";
+import { Card } from "../../src/components/Card";
+import { Button } from "../../src/components/Button";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 const PROVIDER_LABEL: Record<string, string> = {
   google: "Google",
