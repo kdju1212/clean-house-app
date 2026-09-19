@@ -49,6 +49,7 @@ export const CATEGORY_QUESTIONS: Record<string, ReservationQuestion[]> = {
       type: "select",
       options: ["통돌이", "드럼", "트윈워시"],
       required: true,
+      multiple: true,
     },
     { key: "capacity", label: "용량 (kg)", type: "number", placeholder: "예: 15", required: false },
   ],
