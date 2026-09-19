@@ -1,50 +1,43 @@
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchCategories, type Category } from "../../src/api/categories";
+import { searchAllCompanies, type CompanyRow } from "../../src/api/companies";
 import { getSelectedRegion, type StoredRegion } from "../../src/storage/auth-storage";
 import { logout } from "../../src/api/auth";
 import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
-import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
-
-const EMOJI_BY_SLUG: Record<string, string> = {
-  "move-in": "🏠",
-  moving: "📦",
-  residential: "🧹",
-  office: "🏢",
-  restaurant: "🍽️",
-  store: "🏬",
-  aircon: "❄️",
-  washer: "🧺",
-  etc: "✨",
-};
+import { EmptyState } from "../../src/components/EmptyState";
+import { CategoryNavBar } from "../../src/components/CategoryNavBar";
+import { CompanyListItem } from "../../src/components/CompanyListItem";
+import { colors, fontSize, fontWeight, spacing } from "../../src/theme";
 
 export default function CategoriesScreen() {
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [region, setRegion] = useState<StoredRegion | null>(null);
+  const [rows, setRows] = useState<CompanyRow[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    const r = await getSelectedRegion();
+    if (!r) {
+      router.replace("/region-select");
+      return;
+    }
+    setRegion(r);
+    const result = await searchAllCompanies({ regionId: r.id });
+    setRows(result.rows);
+  }, []);
 
   // useFocusEffect (not useEffect) so coming back from /region-select with a
-  // newly saved region refreshes this screen's header instead of showing
-  // whatever region was selected when the screen first mounted.
+  // newly saved region refreshes this screen instead of showing whatever
+  // region was selected when the screen first mounted.
   useFocusEffect(
     useCallback(() => {
-      let cancelled = false;
-      getSelectedRegion().then((r) => {
-        if (cancelled) return;
-        if (!r) {
-          router.replace("/region-select");
-          return;
-        }
-        setRegion(r);
-      });
-      return () => {
-        cancelled = true;
-      };
-    }, [])
+      load();
+    }, [load])
   );
 
-  const [refreshing, setRefreshing] = useState(false);
   const loadCategories = useCallback(() => fetchCategories().then(setCategories), []);
 
   useFocusEffect(
@@ -62,18 +55,18 @@ export default function CategoriesScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      await loadCategories();
+      await load();
     } finally {
       setRefreshing(false);
     }
   }
 
-  if (!region || !categories) {
+  if (!region || !categories || !rows) {
     return <LoadingView />;
   }
 
   return (
-    <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
+    <Screen>
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>어떤 청소가 필요하세요?</Text>
@@ -94,18 +87,19 @@ export default function CategoriesScreen() {
         </View>
       </View>
 
-      <View style={styles.grid}>
-        {categories.map((c) => (
-          <Pressable
-            key={c.id}
-            style={styles.card}
-            onPress={() => router.push(`/categories/${c.slug}`)}
-          >
-            <Text style={styles.emoji}>{EMOJI_BY_SLUG[c.slug] ?? "🧽"}</Text>
-            <Text style={styles.cardText}>{c.name}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.navBar}>
+        <CategoryNavBar categories={categories} activeSlug={null} />
       </View>
+
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => item.id}
+        style={styles.list}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        ListEmptyComponent={<EmptyState text={`아직 ${region.name}에 등록된 업체가 없어요.`} />}
+        renderItem={({ item }) => <CompanyListItem company={item} />}
+      />
     </Screen>
   );
 }
@@ -122,22 +116,6 @@ const styles = StyleSheet.create({
   headerActions: { alignItems: "flex-end", gap: spacing.sm },
   myReservations: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
   logout: { fontSize: fontSize.sm, color: colors.textFaint },
-  grid: {
-    marginTop: spacing.xl,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md,
-  },
-  card: {
-    width: "30%",
-    aspectRatio: 1,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-  },
-  emoji: { fontSize: 24 },
-  cardText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
+  navBar: { marginTop: spacing.lg },
+  list: { marginTop: spacing.md },
 });
