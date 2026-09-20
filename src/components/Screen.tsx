@@ -34,7 +34,6 @@ export const Screen = forwardRef(function Screen(
     refreshing,
     onRefresh,
     onScroll,
-    stickyHeaderIndices,
   }: {
     children: ReactNode;
     scroll?: boolean;
@@ -47,10 +46,6 @@ export const Screen = forwardRef(function Screen(
     /** Only wired up when `scroll` is on — e.g. for a scroll-to-top button
      * that needs to know how far down the screen is. */
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-    /** Only wired up when `scroll` is on — pins the given top-level
-     * children (by index) to the top once scrolled past them, e.g. a
-     * Coupang-style tab nav on a detail screen. */
-    stickyHeaderIndices?: number[];
   },
   ref: Ref<ScrollView>
 ) {
@@ -81,7 +76,6 @@ export const Screen = forwardRef(function Screen(
           onScroll={onScroll}
           scrollEventThrottle={onScroll ? 16 : undefined}
           keyboardShouldPersistTaps="handled"
-          stickyHeaderIndices={stickyHeaderIndices}
         >
           {children}
         </ScrollView>
