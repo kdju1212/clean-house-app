@@ -34,6 +34,7 @@ export type CompanyMe = {
     introText: string | null;
     businessHours: string | null;
     mainImageUrl: string | null;
+    websiteUrl: string | null;
   };
   requestedCount: number;
   averageRating: number;
@@ -55,6 +56,7 @@ export async function updateCompanyProfile(input: {
   introText: string;
   businessHours: string;
   isAvailable: boolean;
+  websiteUrl: string;
 }): Promise<void> {
   await apiFetch("/api/mobile/company/profile", { method: "PATCH", body: input });
 }

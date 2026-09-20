@@ -751,12 +751,13 @@ function InfoSection({
   const [phone, setPhone] = useState(company.phone ? formatPhoneNumber(company.phone) : "");
   const [businessHours, setBusinessHours] = useState(company.businessHours ?? "");
   const [isAvailable, setIsAvailable] = useState(company.isAvailable);
+  const [websiteUrl, setWebsiteUrl] = useState(company.websiteUrl ?? "");
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     setSaving(true);
     try {
-      await updateCompanyProfile({ name, phone, introText, businessHours, isAvailable });
+      await updateCompanyProfile({ name, phone, introText, businessHours, isAvailable, websiteUrl });
       onSaved();
       Alert.alert("저장 완료", "저장됐어요.");
     } catch (err) {
@@ -773,6 +774,18 @@ function InfoSection({
 
       <Text style={[styles.infoLabel, styles.hoursLabel]}>영업시간</Text>
       <BusinessHoursPicker value={businessHours} onChange={setBusinessHours} />
+
+      <TextField
+        label="홈페이지 주소 (선택)"
+        value={websiteUrl}
+        onChangeText={setWebsiteUrl}
+        placeholder="https://example.com"
+        keyboardType="url"
+        autoCapitalize="none"
+      />
+      <Text style={styles.helperText}>
+        입력하면 고객이 예약 버튼을 눌렀을 때 우리 앱 대신 이 주소로 이동해요.
+      </Text>
 
       <View style={styles.infoTable}>
         <View style={[styles.infoRow, styles.infoRowDivider]}>

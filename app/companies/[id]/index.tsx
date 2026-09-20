@@ -140,6 +140,16 @@ export default function CompanyDetailScreen() {
 
   function handleReserveFromBar() {
     if (!data) return;
+
+    // A company with its own site handles booking (and payment) there —
+    // we're a directory/matching app, so send the customer off to it
+    // instead of into our own reserve screen. See clean_house's
+    // Company.websiteUrl / ServiceBar for the same behavior on the web.
+    if (data.company.websiteUrl) {
+      Linking.openURL(data.company.websiteUrl);
+      return;
+    }
+
     // A single service is never ambiguous — no need to make the customer
     // tap it first just to confirm the obvious choice.
     const selected =
@@ -386,7 +396,9 @@ export default function CompanyDetailScreen() {
             </Text>
           </View>
           <Pressable style={styles.stickyBarButton} onPress={handleReserveFromBar}>
-            <Text style={styles.stickyBarButtonText}>예약하기</Text>
+            <Text style={styles.stickyBarButtonText}>
+              {company.websiteUrl ? "홈페이지에서 예약하기" : "예약하기"}
+            </Text>
           </Pressable>
         </Animated.View>
       )}

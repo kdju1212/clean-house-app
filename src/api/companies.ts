@@ -109,6 +109,10 @@ export type CompanyDetail = {
     isVerified: boolean;
     hasBusinessRegistration: boolean;
     mainImageUrl: string | null;
+    // The company's own site — set means "예약하기" should open this
+    // instead of navigating into our own reserve screen (see the detail
+    // screen's handleReserveFromBar). Mirrors clean_house's Company.websiteUrl.
+    websiteUrl: string | null;
   };
   services: CompanyDetailService[];
   photos: CompanyDetailPhoto[];
