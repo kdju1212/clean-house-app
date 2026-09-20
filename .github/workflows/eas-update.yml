@@ -37,4 +37,9 @@ jobs:
             echo "::error::EXPO_TOKEN secret is not set."
             exit 1
           fi
+          # `eas update` doesn't read eas.json's build.production.env the way
+          # `eas build --profile production` does, so EXPO_PUBLIC_* vars have
+          # to be set explicitly here too — otherwise they inline as
+          # undefined and API_BASE_URL silently falls back to localhost.
+          export EXPO_PUBLIC_API_URL=$(node -pe 'require("./eas.json").build.production.env.EXPO_PUBLIC_API_URL')
           eas update --branch production --non-interactive --message "${COMMIT_MESSAGE:-manual update}"
