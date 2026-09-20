@@ -46,13 +46,13 @@ export async function submitReview(input: {
   reservationId: string;
   rating: number;
   content: string;
-  publicId?: string | null;
+  publicIds?: string[];
 }): Promise<{ companyId: string }> {
   return apiFetch<{ companyId: string }>(
     `/api/mobile/reservations/${input.reservationId}/review`,
     {
       method: "POST",
-      body: { rating: input.rating, content: input.content, publicId: input.publicId ?? null },
+      body: { rating: input.rating, content: input.content, publicIds: input.publicIds ?? [] },
     }
   );
 }

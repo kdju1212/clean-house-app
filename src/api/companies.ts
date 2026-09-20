@@ -70,7 +70,7 @@ export type CompanyReview = {
   id: string;
   rating: number;
   content: string;
-  photoUrl: string | null;
+  photoUrls: string[];
   customerName: string;
   createdAt: string;
 };

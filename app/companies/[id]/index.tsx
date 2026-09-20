@@ -239,7 +239,9 @@ export default function CompanyDetailScreen() {
     photo.categoryId === null || photo.categoryId === selectedService?.categoryId;
   const workPhotos = photos.filter((p) => p.type === "WORK" && matchesSelected(p));
   const beforeAfterPhotos = photos.filter((p) => p.type === "BEFORE_AFTER" && matchesSelected(p));
-  const reviewPhotos = reviews.filter((r) => r.photoUrl);
+  const reviewPhotos = reviews.flatMap((r) =>
+    r.photoUrls.map((url) => ({ key: `${r.id}-${url}`, url }))
+  );
   const introText = selectedService?.description || company.introText;
 
   return (
@@ -351,8 +353,8 @@ export default function CompanyDetailScreen() {
             <RatingDistribution averageRating={averageRating} reviews={reviews} />
             {reviewPhotos.length > 0 && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewPhotoStrip}>
-                {reviewPhotos.map((review) => (
-                  <Image key={review.id} source={{ uri: review.photoUrl! }} style={styles.reviewPhotoThumb} />
+                {reviewPhotos.map((photo) => (
+                  <Image key={photo.key} source={{ uri: photo.url }} style={styles.reviewPhotoThumb} />
                 ))}
               </ScrollView>
             )}
@@ -369,8 +371,12 @@ export default function CompanyDetailScreen() {
                 </View>
                 <Text style={styles.reviewAuthor}>{review.customerName}</Text>
                 <Text style={styles.reviewContent}>{review.content}</Text>
-                {review.photoUrl && (
-                  <Image source={{ uri: review.photoUrl }} style={styles.reviewPhoto} />
+                {review.photoUrls.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewCardPhotoRow}>
+                    {review.photoUrls.map((url) => (
+                      <Image key={url} source={{ uri: url }} style={styles.reviewPhoto} />
+                    ))}
+                  </ScrollView>
                 )}
               </View>
             ))}
@@ -533,7 +539,8 @@ const styles = StyleSheet.create({
   reviewDate: { fontSize: fontSize.xs, color: colors.textFaint },
   reviewAuthor: { marginTop: 2, fontSize: fontSize.xs, color: colors.textMuted },
   reviewContent: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.text },
-  reviewPhoto: { marginTop: spacing.sm, width: 96, height: 96, borderRadius: radius.md },
+  reviewCardPhotoRow: { marginTop: spacing.sm },
+  reviewPhoto: { width: 96, height: 96, borderRadius: radius.md, marginRight: spacing.sm },
   stickyBar: {
     position: "absolute",
     left: 0,
