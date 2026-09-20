@@ -1,14 +1,13 @@
 import { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchCompanyMe, type CompanyMe } from "../../src/api/company";
-import { logout } from "../../src/api/auth";
 import { ApiError } from "../../src/api/client";
 import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
 import { Card } from "../../src/components/Card";
 import { Badge } from "../../src/components/Badge";
-import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
+import { colors, fontSize, fontWeight, spacing } from "../../src/theme";
 
 const STATUS_LABEL: Record<CompanyMe["company"]["status"], string> = {
   PENDING: "심사중",
@@ -16,6 +15,14 @@ const STATUS_LABEL: Record<CompanyMe["company"]["status"], string> = {
   SUSPENDED: "비활성화됨",
 };
 
+/**
+ * The 업체 관리 tab (see app/(tabs)/_layout.tsx) — a hub linking into
+ * /company/reservations and /company/profile, which stay plain pushed
+ * stack screens (no tab bar of their own anymore) rather than tabs
+ * themselves, same pattern as the customer 내 예약 tab pushing into
+ * /reservations/[id]. Login/logout live on the 마이페이지 tab, shared by
+ * every account regardless of role.
+ */
 export default function CompanyDashboardScreen() {
   const [state, setState] = useState<
     | { status: "loading" }
@@ -41,11 +48,6 @@ export default function CompanyDashboardScreen() {
     }, [load])
   );
 
-  async function handleLogout() {
-    await logout();
-    router.replace("/login");
-  }
-
   async function handleRefresh() {
     setRefreshing(true);
     try {
@@ -59,17 +61,14 @@ export default function CompanyDashboardScreen() {
     return <LoadingView />;
   }
 
+  // Only reachable if the tab itself is somehow still visible right after
+  // a company gets deleted from under this account — the tab bar's own
+  // isCompany check normally keeps a non-owner from ever landing here.
   if (state.status === "no-company") {
     return (
       <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
         <Text style={styles.title}>업체 관리</Text>
-        <Text style={styles.emptyText}>아직 등록된 업체가 없어요.</Text>
-        <Pressable onPress={() => router.push("/company-register")} style={styles.registerLink}>
-          <Text style={styles.registerLinkText}>업체 등록하기</Text>
-        </Pressable>
-        <Pressable onPress={handleLogout} style={styles.logoutStandalone}>
-          <Text style={styles.logout}>로그아웃</Text>
-        </Pressable>
+        <Text style={styles.emptyText}>등록된 업체를 찾을 수 없어요.</Text>
       </Screen>
     );
   }
@@ -80,9 +79,6 @@ export default function CompanyDashboardScreen() {
     <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
       <View style={styles.header}>
         <Text style={styles.title}>{company.name}</Text>
-        <Pressable onPress={handleLogout}>
-          <Text style={styles.logout}>로그아웃</Text>
-        </Pressable>
       </View>
       <Badge label={STATUS_LABEL[company.status]} style={styles.statusBadge} />
 
@@ -107,21 +103,10 @@ export default function CompanyDashboardScreen() {
 const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
-  logout: { fontSize: fontSize.sm, color: colors.textFaint },
-  logoutStandalone: { marginTop: spacing.xxl },
   statusBadge: { marginTop: spacing.sm - 2 },
   ratingText: { marginTop: spacing.md, fontSize: fontSize.base, color: colors.textMuted },
   card: { marginTop: spacing.lg },
   cardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
   emptyText: { marginTop: spacing.md, fontSize: fontSize.base, color: colors.textMuted },
-  registerLink: {
-    marginTop: spacing.lg,
-    alignSelf: "flex-start",
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-  },
-  registerLinkText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.onPrimary },
 });

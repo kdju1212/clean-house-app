@@ -4,7 +4,7 @@ import { router, useFocusEffect } from "expo-router";
 import { fetchMyPage, updateMyPhone, type MyPageData } from "../../src/api/mypage";
 import { toggleCompanyFavorite } from "../../src/api/companies";
 import { logout } from "../../src/api/auth";
-import { updateStoredPhone } from "../../src/storage/auth-storage";
+import { getStoredUser, updateStoredPhone } from "../../src/storage/auth-storage";
 import { API_BASE_URL } from "../../src/api/client";
 import { formatPhoneNumber } from "../../src/utils/phone";
 import { Screen } from "../../src/components/Screen";
@@ -32,6 +32,10 @@ export default function MyPageScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Hides the "사장님이신가요?" prompt for an account that already is
+  // one — it'd otherwise dangle here even once the 업체 관리 tab (see
+  // app/(tabs)/_layout.tsx) is already showing the same account's company.
+  const [isCompany, setIsCompany] = useState(false);
 
   const load = useCallback(() => {
     return fetchMyPage().then((result) => {
@@ -39,6 +43,12 @@ export default function MyPageScreen() {
       setPhone(result.user.phone ? formatPhoneNumber(result.user.phone) : "");
     });
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      getStoredUser().then((user) => setIsCompany(user?.role === "COMPANY"));
+    }, [])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -208,9 +218,11 @@ export default function MyPageScreen() {
         )}
       </Card>
 
-      <Pressable onPress={() => router.push("/company-register")} style={styles.companyLink}>
-        <Text style={styles.companyLinkText}>사장님이신가요? 업체 등록하기</Text>
-      </Pressable>
+      {!isCompany && (
+        <Pressable onPress={() => router.push("/company-register")} style={styles.companyLink}>
+          <Text style={styles.companyLinkText}>사장님이신가요? 업체 등록하기</Text>
+        </Pressable>
+      )}
 
       <Pressable onPress={handleLogout} style={styles.logoutButton}>
         <Text style={styles.logout}>로그아웃</Text>
