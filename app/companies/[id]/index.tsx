@@ -310,6 +310,7 @@ export default function CompanyDetailScreen() {
             </Pressable>
           </View>
           <Pressable
+            style={styles.ratingBlock}
             onPress={() =>
               router.push({
                 pathname: "/companies/[id]/reviews",
@@ -317,11 +318,17 @@ export default function CompanyDetailScreen() {
               })
             }
           >
-            <Text style={styles.ratingLine}>
-              {reviewCount > 0
-                ? `★ ${averageRating.toFixed(1)} 리뷰 ${reviewCount}개 >`
-                : "아직 리뷰가 없어요"}
-            </Text>
+            {reviewCount > 0 ? (
+              <>
+                <Text style={styles.ratingStars}>
+                  {"★".repeat(Math.round(averageRating))}
+                  {"☆".repeat(5 - Math.round(averageRating))}
+                </Text>
+                <Text style={styles.ratingCount}>{reviewCount.toLocaleString()}</Text>
+              </>
+            ) : (
+              <Text style={styles.ratingCount}>아직 리뷰가 없어요</Text>
+            )}
           </Pressable>
           {introText && <Text style={styles.intro}>{introText}</Text>}
 
@@ -524,7 +531,9 @@ const styles = StyleSheet.create({
   nameRow: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm - 2, flexShrink: 1 },
   name: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text, flexShrink: 1 },
   favoriteIcon: { fontSize: 26, color: colors.danger },
-  ratingLine: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.textMuted },
+  ratingBlock: { marginTop: spacing.xs, alignItems: "flex-end", alignSelf: "flex-end" },
+  ratingStars: { fontSize: fontSize.xl, letterSpacing: 1, color: colors.star },
+  ratingCount: { marginTop: 2, fontSize: fontSize.xs, color: colors.textMuted },
   intro: { marginTop: spacing.sm, fontSize: fontSize.base, color: colors.text },
   section: { marginTop: spacing.xl },
   sectionTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
