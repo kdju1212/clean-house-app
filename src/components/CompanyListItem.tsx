@@ -40,7 +40,11 @@ export function CompanyListItem({
       <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardName}>{company.name}</Text>
-          {company.isVerified && <Badge label="인증" tone="info" />}
+          {company.isVerified ? (
+            <Badge label="인증" tone="info" />
+          ) : (
+            company.hasBusinessRegistration && <Badge label="사업자등록" tone="neutral" />
+          )}
           {isAd && <Badge label="광고" tone="warning" />}
         </View>
         <Text style={styles.cardIntro} numberOfLines={1}>

@@ -283,7 +283,11 @@ export default function CompanyDetailScreen() {
           <View style={styles.headerRow}>
             <View style={styles.nameRow}>
               <Text style={styles.name}>{company.name}</Text>
-              {company.isVerified && <Badge label="인증" tone="info" />}
+              {company.isVerified ? (
+                <Badge label="인증" tone="info" />
+              ) : (
+                company.hasBusinessRegistration && <Badge label="사업자등록" tone="neutral" />
+              )}
             </View>
             <Pressable onPress={handleToggleFavorite} disabled={togglingFavorite} hitSlop={8}>
               <Text style={styles.favoriteIcon}>{isFavorited ? "♥" : "♡"}</Text>

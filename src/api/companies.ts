@@ -6,6 +6,9 @@ export type CompanyRow = {
   mainImageUrl: string | null;
   isAvailable: boolean;
   isVerified: boolean;
+  // Self-declared (entered a business registration number, unchecked) —
+  // a lighter trust signal than isVerified, shown only when not verified.
+  hasBusinessRegistration: boolean;
   introText: string | null;
   price: number;
   pricingUnit: "FLAT" | "PER_UNIT";
@@ -104,6 +107,7 @@ export type CompanyDetail = {
     businessHours: string | null;
     isAvailable: boolean;
     isVerified: boolean;
+    hasBusinessRegistration: boolean;
     mainImageUrl: string | null;
   };
   services: CompanyDetailService[];
