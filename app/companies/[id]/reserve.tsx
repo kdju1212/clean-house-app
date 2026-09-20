@@ -5,6 +5,7 @@ import * as Location from "expo-location";
 import { createReservation } from "../../../src/api/reservations";
 import { fetchAddressByCoords } from "../../../src/api/address";
 import { fetchCategoryProfile } from "../../../src/api/category-profile";
+import { fetchCompanyDetail } from "../../../src/api/companies";
 import { getSelectedRegion, getStoredUser, updateStoredPhone } from "../../../src/storage/auth-storage";
 import { getReservationQuestions } from "../../../src/utils/reservation-questions";
 import { Screen } from "../../../src/components/Screen";
@@ -45,6 +46,8 @@ export default function ReserveScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const isDesiredDateBlocked = blockedDates.includes(desiredDate);
 
   useEffect(() => {
     // Web pre-fills name/phone from the account (Kakao profile name, phone
@@ -72,6 +75,13 @@ export default function ReserveScreen() {
       .catch(() => {});
   }, [params.categorySlug, questions.length]);
 
+  useEffect(() => {
+    if (!params.id) return;
+    fetchCompanyDetail(params.id)
+      .then((detail) => setBlockedDates(detail.blockedDates))
+      .catch(() => {});
+  }, [params.id]);
+
   async function handleLocateAddress() {
     setLocateError(null);
     setLocating(true);
@@ -97,6 +107,11 @@ export default function ReserveScreen() {
   async function handleSubmit() {
     if (!desiredTime) {
       Alert.alert("알림", "희망 시간을 선택해주세요.");
+      return;
+    }
+
+    if (isDesiredDateBlocked) {
+      Alert.alert("알림", "해당 날짜는 업체 휴무일이에요. 다른 날짜를 선택해주세요.");
       return;
     }
 
@@ -181,6 +196,11 @@ export default function ReserveScreen() {
         onChangeText={setDesiredDate}
         placeholder="2026-01-15"
       />
+      {isDesiredDateBlocked && (
+        <Text style={styles.errorText}>
+          해당 날짜는 업체 휴무일이에요. 다른 날짜를 선택해주세요.
+        </Text>
+      )}
 
       <Text style={styles.label}>희망 시간</Text>
       <View style={styles.timeGrid}>
@@ -272,6 +292,7 @@ export default function ReserveScreen() {
         title="예약 신청하기"
         onPress={handleSubmit}
         loading={submitting}
+        disabled={isDesiredDateBlocked}
         style={styles.submitButton}
       />
     </Screen>

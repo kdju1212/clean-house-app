@@ -112,6 +112,10 @@ export type CompanyDetail = {
   };
   services: CompanyDetailService[];
   photos: CompanyDetailPhoto[];
+  // "YYYY-MM-DD" strings, today or later — see company/schedule on the web
+  // repo. The reserve screen uses this to warn before submitting; the
+  // server re-checks it regardless.
+  blockedDates: string[];
   regionNames: string[];
   averageRating: number;
   reviewCount: number;
