@@ -1,0 +1,40 @@
+name: Publish OTA update
+
+# Pushes every commit on main out to already-installed apps via eas update
+# (production channel) — no native build, just the JS bundle. This only
+# covers JS/asset changes; a commit that also touches native config
+# (new packages, permissions, app.json/eas.json) still needs a fresh APK
+# via release-apk.yml, since an OTA update can't add new native modules to
+# an already-installed app.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  publish-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Publish update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN secret is not set."
+            exit 1
+          fi
+          eas update --branch production --non-interactive --message "${COMMIT_MESSAGE:-manual update}"
