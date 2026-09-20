@@ -56,6 +56,7 @@ export default function CompanyDetailScreen() {
   const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<"info" | "review">("info");
   // One shared full-screen viewer for every photo on this screen (hero,
   // review strip, per-review photos) — tap opens it, tap again closes it.
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
@@ -314,82 +315,108 @@ export default function CompanyDetailScreen() {
           </Text>
           {introText && <Text style={styles.intro}>{introText}</Text>}
 
-          <Section title="서비스 · 가격">
-            {services.map((service) => {
-              const isSelected = service.categoryId === (selectedService?.categoryId ?? null);
-              return (
-                <Pressable
-                  key={service.id}
-                  style={[styles.serviceRow, isSelected && styles.serviceRowSelected]}
-                  onPress={() => setSelectedCategoryId(service.categoryId)}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.serviceName}>{service.categoryName}</Text>
-                    {service.description && (
-                      <Text style={styles.serviceDescription}>{service.description}</Text>
-                    )}
-                  </View>
-                  <Text style={styles.servicePrice}>{formatServicePrice(service)}</Text>
-                </Pressable>
-              );
-            })}
-            {services.length === 0 && (
-              <Text style={styles.emptyText}>등록된 서비스가 없어요.</Text>
-            )}
-          </Section>
+          <View style={styles.tabBar}>
+            <Pressable
+              style={[styles.tabButton, activeTab === "info" && styles.tabButtonActive]}
+              onPress={() => setActiveTab("info")}
+            >
+              <Text style={[styles.tabButtonText, activeTab === "info" && styles.tabButtonTextActive]}>
+                정보
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.tabButton, activeTab === "review" && styles.tabButtonActive]}
+              onPress={() => setActiveTab("review")}
+            >
+              <Text style={[styles.tabButtonText, activeTab === "review" && styles.tabButtonTextActive]}>
+                {`리뷰${reviewCount > 0 ? ` ${reviewCount}` : ""}`}
+              </Text>
+            </Pressable>
+          </View>
 
-          <PhotoStack title="작업 사진" photos={workPhotos} />
-          <PhotoStack title="전/후 비교" photos={beforeAfterPhotos} />
-
-          <Section title="이용 안내">
-            <View style={styles.infoTable}>
-              <InfoRow label="서비스 지역" value={regionNames.join(", ") || "-"} />
-              <InfoRow label="영업시간" value={company.businessHours ?? "-"} />
-              <InfoRow label="예약 가능 여부" value={company.isAvailable ? "예약 가능" : "예약 마감"} />
-              {company.phone && (
-                <Pressable onPress={() => Linking.openURL(`tel:${company.phone}`)}>
-                  <InfoRow label="연락처" value={company.phone} valueStyle={styles.phoneLink} last />
-                </Pressable>
-              )}
-            </View>
-          </Section>
-
-          <Section title={`리뷰${reviewCount > 0 ? ` (${reviewCount})` : ""}`}>
-            <RatingDistribution averageRating={averageRating} reviews={reviews} />
-            {reviewPhotos.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewPhotoStrip}>
-                {reviewPhotos.map((photo) => (
-                  <Pressable key={photo.key} onPress={() => setZoomedPhoto(photo.url)}>
-                    <Image source={{ uri: photo.url }} style={styles.reviewPhotoThumb} />
-                  </Pressable>
-                ))}
-              </ScrollView>
-            )}
-            {reviews.map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewStars}>
-                    {"★".repeat(review.rating)}
-                    {"☆".repeat(5 - review.rating)}
-                  </Text>
-                  <Text style={styles.reviewDate}>
-                    {new Date(review.createdAt).toLocaleDateString("ko-KR")}
-                  </Text>
-                </View>
-                <Text style={styles.reviewAuthor}>{review.customerName}</Text>
-                <Text style={styles.reviewContent}>{review.content}</Text>
-                {review.photoUrls.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewCardPhotoRow}>
-                    {review.photoUrls.map((url) => (
-                      <Pressable key={url} onPress={() => setZoomedPhoto(url)}>
-                        <Image source={{ uri: url }} style={styles.reviewPhoto} />
-                      </Pressable>
-                    ))}
-                  </ScrollView>
+          {activeTab === "info" ? (
+            <>
+              <Section title="서비스 · 가격">
+                {services.map((service) => {
+                  const isSelected = service.categoryId === (selectedService?.categoryId ?? null);
+                  return (
+                    <Pressable
+                      key={service.id}
+                      style={[styles.serviceRow, isSelected && styles.serviceRowSelected]}
+                      onPress={() => setSelectedCategoryId(service.categoryId)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.serviceName}>{service.categoryName}</Text>
+                        {service.description && (
+                          <Text style={styles.serviceDescription}>{service.description}</Text>
+                        )}
+                      </View>
+                      <Text style={styles.servicePrice}>{formatServicePrice(service)}</Text>
+                    </Pressable>
+                  );
+                })}
+                {services.length === 0 && (
+                  <Text style={styles.emptyText}>등록된 서비스가 없어요.</Text>
                 )}
-              </View>
-            ))}
-          </Section>
+              </Section>
+
+              <PhotoStack title="작업 사진" photos={workPhotos} />
+              <PhotoStack title="전/후 비교" photos={beforeAfterPhotos} />
+
+              <Section title="이용 안내">
+                <View style={styles.infoTable}>
+                  <InfoRow label="서비스 지역" value={regionNames.join(", ") || "-"} />
+                  <InfoRow label="영업시간" value={company.businessHours ?? "-"} />
+                  <InfoRow
+                    label="예약 가능 여부"
+                    value={company.isAvailable ? "예약 가능" : "예약 마감"}
+                  />
+                  {company.phone && (
+                    <Pressable onPress={() => Linking.openURL(`tel:${company.phone}`)}>
+                      <InfoRow label="연락처" value={company.phone} valueStyle={styles.phoneLink} last />
+                    </Pressable>
+                  )}
+                </View>
+              </Section>
+            </>
+          ) : (
+            <Section title={`리뷰${reviewCount > 0 ? ` (${reviewCount})` : ""}`}>
+              <RatingDistribution averageRating={averageRating} reviews={reviews} />
+              {reviewPhotos.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewPhotoStrip}>
+                  {reviewPhotos.map((photo) => (
+                    <Pressable key={photo.key} onPress={() => setZoomedPhoto(photo.url)}>
+                      <Image source={{ uri: photo.url }} style={styles.reviewPhotoThumb} />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+              {reviews.map((review) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.reviewStars}>
+                      {"★".repeat(review.rating)}
+                      {"☆".repeat(5 - review.rating)}
+                    </Text>
+                    <Text style={styles.reviewDate}>
+                      {new Date(review.createdAt).toLocaleDateString("ko-KR")}
+                    </Text>
+                  </View>
+                  <Text style={styles.reviewAuthor}>{review.customerName}</Text>
+                  <Text style={styles.reviewContent}>{review.content}</Text>
+                  {review.photoUrls.length > 0 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewCardPhotoRow}>
+                      {review.photoUrls.map((url) => (
+                        <Pressable key={url} onPress={() => setZoomedPhoto(url)}>
+                          <Image source={{ uri: url }} style={styles.reviewPhoto} />
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
+              ))}
+            </Section>
+          )}
         </View>
       </Screen>
 
@@ -512,6 +539,23 @@ const styles = StyleSheet.create({
   favoriteIcon: { fontSize: 26, color: colors.danger },
   ratingLine: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.textMuted },
   intro: { marginTop: spacing.sm, fontSize: fontSize.base, color: colors.text },
+  tabBar: {
+    flexDirection: "row",
+    marginTop: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    marginBottom: -1,
+  },
+  tabButtonActive: { borderBottomColor: colors.primary },
+  tabButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.textFaint },
+  tabButtonTextActive: { color: colors.text, fontWeight: fontWeight.semibold },
   section: { marginTop: spacing.xl },
   sectionTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
   sectionBody: { marginTop: spacing.sm },
