@@ -50,6 +50,23 @@ export async function fetchCompanyMe(): Promise<CompanyMe> {
   return apiFetch<CompanyMe>("/api/mobile/company/me");
 }
 
+/** Registers the caller's account as a company — see clean_house's
+ * createCompanyForOwner for the shared validation this hits. No-ops
+ * (still returns the existing companyId) if one already exists. */
+export async function registerCompany(input: {
+  name: string;
+  phone: string;
+  introText?: string;
+  businessHours?: string;
+  businessRegistrationNumber?: string;
+  representativeName?: string;
+}): Promise<{ companyId: string }> {
+  return apiFetch<{ companyId: string }>("/api/mobile/company/register", {
+    method: "POST",
+    body: input,
+  });
+}
+
 export async function updateCompanyProfile(input: {
   name: string;
   phone: string;

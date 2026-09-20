@@ -208,6 +208,10 @@ export default function MyPageScreen() {
         )}
       </Card>
 
+      <Pressable onPress={() => router.push("/company-register")} style={styles.companyLink}>
+        <Text style={styles.companyLinkText}>사장님이신가요? 업체 등록하기</Text>
+      </Pressable>
+
       <Pressable onPress={handleLogout} style={styles.logoutButton}>
         <Text style={styles.logout}>로그아웃</Text>
       </Pressable>
@@ -285,7 +289,9 @@ const styles = StyleSheet.create({
   favoriteThumbEmoji: { fontSize: fontSize.md },
   favoriteInfo: { flex: 1 },
   favoriteRemove: { fontSize: fontSize.lg, color: colors.danger },
-  logoutButton: { marginTop: spacing.xxl, alignSelf: "flex-start" },
+  companyLink: { marginTop: spacing.xxl, alignSelf: "flex-start" },
+  companyLinkText: { fontSize: fontSize.sm, color: colors.textFaint },
+  logoutButton: { marginTop: spacing.lg, alignSelf: "flex-start" },
   logout: { fontSize: fontSize.base, color: colors.textFaint, textDecorationLine: "underline" },
   footerLinks: { marginTop: spacing.md, flexDirection: "row", gap: spacing.lg },
   footerLink: { fontSize: fontSize.xs, color: colors.textFaint, textDecorationLine: "underline" },

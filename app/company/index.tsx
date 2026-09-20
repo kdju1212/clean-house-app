@@ -8,7 +8,7 @@ import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
 import { Card } from "../../src/components/Card";
 import { Badge } from "../../src/components/Badge";
-import { colors, fontSize, fontWeight, spacing } from "../../src/theme";
+import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 const STATUS_LABEL: Record<CompanyMe["company"]["status"], string> = {
   PENDING: "심사중",
@@ -63,9 +63,10 @@ export default function CompanyDashboardScreen() {
     return (
       <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
         <Text style={styles.title}>업체 관리</Text>
-        <Text style={styles.emptyText}>
-          아직 등록된 업체가 없어요. 웹에서 먼저 업체를 등록해주세요.
-        </Text>
+        <Text style={styles.emptyText}>아직 등록된 업체가 없어요.</Text>
+        <Pressable onPress={() => router.push("/company-register")} style={styles.registerLink}>
+          <Text style={styles.registerLinkText}>업체 등록하기</Text>
+        </Pressable>
         <Pressable onPress={handleLogout} style={styles.logoutStandalone}>
           <Text style={styles.logout}>로그아웃</Text>
         </Pressable>
@@ -114,4 +115,13 @@ const styles = StyleSheet.create({
   cardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
   emptyText: { marginTop: spacing.md, fontSize: fontSize.base, color: colors.textMuted },
+  registerLink: {
+    marginTop: spacing.lg,
+    alignSelf: "flex-start",
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+  },
+  registerLinkText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.onPrimary },
 });

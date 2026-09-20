@@ -58,6 +58,20 @@ export async function updateStoredPhone(phone: string): Promise<void> {
   await AsyncStorage.setItem(USER_KEY, JSON.stringify({ ...user, phone }));
 }
 
+/**
+ * Registering a company changes the account's role server-side (see
+ * clean_house's createCompanyForOwner), but there's no re-login here to
+ * refresh it from — the login screen's "COMPANY -> /company" branch (see
+ * app/login.tsx) reads this cached copy, so it has to be patched locally
+ * right after a successful registration or the app keeps routing the user
+ * as a CUSTOMER until their next login.
+ */
+export async function updateStoredRole(role: StoredUser["role"]): Promise<void> {
+  const user = await getStoredUser();
+  if (!user || user.role === role) return;
+  await AsyncStorage.setItem(USER_KEY, JSON.stringify({ ...user, role }));
+}
+
 const REGION_KEY = "selected_region";
 
 export type StoredRegion = { id: string; name: string };
