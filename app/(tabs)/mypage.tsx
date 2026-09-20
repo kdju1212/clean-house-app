@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
-import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import * as Updates from "expo-updates";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchMyPage, updateMyPhone, type MyPageData } from "../../src/api/mypage";
 import { toggleCompanyFavorite } from "../../src/api/companies";
 import { logout } from "../../src/api/auth";
@@ -45,7 +47,43 @@ export default function MyPageTabScreen() {
     return <LoadingView />;
   }
 
-  return isCompany ? <CompanyProfileScreen /> : <CustomerMyPageView />;
+  return (
+    <View style={styles.flex}>
+      {isCompany ? <CompanyProfileScreen /> : <CustomerMyPageView />}
+      <ReloadButton />
+    </View>
+  );
+}
+
+/**
+ * Full app reload (not a data refetch) — mainly so we don't have to
+ * force-quit and reopen the app from the task switcher just to pick up a
+ * newly published OTA update while testing.
+ */
+function ReloadButton() {
+  const insets = useSafeAreaInsets();
+  const [reloading, setReloading] = useState(false);
+
+  async function handleReload() {
+    setReloading(true);
+    try {
+      await Updates.reloadAsync();
+    } catch {
+      Alert.alert("새로고침 실패", "지금 환경에서는 지원되지 않아요.");
+      setReloading(false);
+    }
+  }
+
+  return (
+    <Pressable
+      onPress={handleReload}
+      disabled={reloading}
+      hitSlop={8}
+      style={[styles.reloadButton, { top: insets.top + spacing.sm }]}
+    >
+      <Text style={styles.reloadButtonText}>{reloading ? "새로고침 중…" : "🔄 새로고침"}</Text>
+    </Pressable>
+  );
 }
 
 function CustomerMyPageView() {
@@ -252,6 +290,16 @@ function CustomerMyPageView() {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  reloadButton: {
+    position: "absolute",
+    right: spacing.xl,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  reloadButtonText: { fontSize: fontSize.xs, color: colors.textMuted },
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   card: { marginTop: spacing.lg },
   label: { fontSize: fontSize.sm, color: colors.textMuted },

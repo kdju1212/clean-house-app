@@ -6,6 +6,7 @@ import * as Notifications from "expo-notifications";
 import { getStoredToken } from "../src/storage/auth-storage";
 import { registerForPushNotifications, mapNotificationLinkToRoute } from "../src/notifications";
 import { checkForApkUpdate, downloadAndInstallApk } from "../src/apk-update";
+import { VersionBadge } from "../src/components/VersionBadge";
 
 export default function RootLayout() {
   const rootNavigationState = useRootNavigationState();
@@ -74,6 +75,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <Stack screenOptions={{ headerShown: false }} />
+      <VersionBadge />
     </SafeAreaProvider>
   );
 }
