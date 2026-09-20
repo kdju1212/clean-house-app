@@ -218,12 +218,11 @@ export default function CompanyDetailScreen() {
   const { company, services, photos, regionNames, averageRating, reviewCount, reviews, isFavorited } =
     data;
   const mainPhoto = company.mainImageUrl;
-  const galleryPhotos = mainPhoto
-    ? [
-        { id: "main", url: mainPhoto },
-        ...photos.filter((p) => p.url !== mainPhoto),
-      ]
-    : photos;
+  // Just the current main image — work/전후 photos already get their own
+  // PhotoStack sections further down, so the hero no longer needs to
+  // double as a full gallery with a thumbnail strip (mirrors the web
+  // repo's companies/[id]/gallery.tsx).
+  const galleryPhotos = mainPhoto ? [{ id: "main", url: mainPhoto }] : [];
   const cheapest = services.reduce<CompanyDetail["services"][number] | null>(
     (min, s) => (!min || s.price < min.price ? s : min),
     null
