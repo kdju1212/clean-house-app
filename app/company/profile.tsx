@@ -785,6 +785,8 @@ function InfoSection({
       />
       <Text style={styles.helperText}>
         입력하면 고객이 예약 버튼을 눌렀을 때 우리 앱 대신 이 주소로 이동해요.
+        홈페이지로 연결하면 그 예약은 우리 앱에 기록되지 않아서, 리뷰나 예약
+        건수에는 반영되지 않아요.
       </Text>
 
       <View style={styles.infoTable}>
