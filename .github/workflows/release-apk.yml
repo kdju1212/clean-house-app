@@ -1,0 +1,65 @@
+name: Build and release APK
+
+# Builds an installable Android APK via EAS and attaches it to a GitHub
+# Release. The app itself checks this repo's "latest release" for a newer
+# version and offers to install it — see src/apk-update.ts. Run this
+# manually (Actions tab → this workflow → "Run workflow") whenever you want
+# to ship a new build, after bumping "version" in app.json.
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build Android APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN secret is not set. Add it under Settings > Secrets and variables > Actions (get the token from https://expo.dev/accounts/[account]/settings/access-tokens)."
+            exit 1
+          fi
+          eas build --platform android --profile production --non-interactive --wait --json > build-output.json
+          cat build-output.json
+
+      - name: Download built APK
+        run: |
+          BUILD_URL=$(node -pe 'JSON.parse(require("fs").readFileSync("build-output.json", "utf8"))[0].artifacts.buildUrl')
+          echo "Downloading $BUILD_URL"
+          curl -L -o clean-house-app.apk "$BUILD_URL"
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(node -pe 'require("./app.json").expo.version')
+            echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: clean-house-app.apk
