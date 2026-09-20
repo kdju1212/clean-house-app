@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchCategories, type Category } from "../../src/api/categories";
-import { searchAllCompanies, searchCompanies, type CompanyRow } from "../../src/api/companies";
+import { searchCompanies, type CompanyRow } from "../../src/api/companies";
 import { fetchCategoryProfile, fetchAllCategoryProfiles } from "../../src/api/category-profile";
 import { getSelectedRegion, type StoredRegion } from "../../src/storage/auth-storage";
 import { logout } from "../../src/api/auth";
@@ -57,27 +57,18 @@ export default function CategoriesScreen() {
   // route, which remounted the screen and showed a full loading spinner on
   // every tap; this way the header/nav bar never disappear and only the
   // list itself refetches, which is what actually makes it feel instant.
-  const loadRows = useCallback(async (regionId: string, slug: string | null, query: string) => {
+  const loadRows = useCallback(async (regionId: string, slug: string, query: string) => {
     const requestId = ++requestIdRef.current;
 
-    if (slug === null) {
-      const result = await searchAllCompanies({ regionId, query: query || undefined });
-      if (requestIdRef.current !== requestId) return; // a newer tap already superseded this one
-      setActiveCategoryId(null);
-      setActiveCategoryName(null);
-      setCategoryProfile(null);
-      setRows(result.rows);
-    } else {
-      const [result, profile] = await Promise.all([
-        searchCompanies({ slug, regionId, query: query || undefined }),
-        fetchCategoryProfile(slug).catch(() => null),
-      ]);
-      if (requestIdRef.current !== requestId) return;
-      setActiveCategoryId(result.category.id);
-      setActiveCategoryName(result.category.name);
-      setCategoryProfile(profile);
-      setRows([...result.adRows.map((r) => ({ ...r, isAd: true })), ...result.rows]);
-    }
+    const [result, profile] = await Promise.all([
+      searchCompanies({ slug, regionId, query: query || undefined }),
+      fetchCategoryProfile(slug).catch(() => null),
+    ]);
+    if (requestIdRef.current !== requestId) return; // a newer tap already superseded this one
+    setActiveCategoryId(result.category.id);
+    setActiveCategoryName(result.category.name);
+    setCategoryProfile(profile);
+    setRows([...result.adRows.map((r) => ({ ...r, isAd: true })), ...result.rows]);
   }, []);
 
   // useFocusEffect (not useEffect) so coming back from /region-select with a
@@ -100,7 +91,16 @@ export default function CategoriesScreen() {
     }, [])
   );
 
-  const loadCategories = useCallback(() => fetchCategories().then(setCategories), []);
+  // No more "전체" pill to land on by default — the first category (by
+  // `order`) fills that role instead, same as / on the web repo. Setting
+  // it here (right alongside the fetch that produced it) rather than in a
+  // separate effect keyed on `categories` avoids deriving state from state.
+  const loadCategories = useCallback(() => {
+    return fetchCategories().then((cats) => {
+      setCategories(cats);
+      setActiveSlug((prev) => prev ?? cats[0]?.slug ?? null);
+    });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -112,7 +112,7 @@ export default function CategoriesScreen() {
   useFocusEffect(loadAllProfiles);
 
   useEffect(() => {
-    if (!region) return;
+    if (!region || !activeSlug) return;
     // Deliberately doesn't clear rows first — keeping the previous tab's
     // list visible until the new one arrives (fetches are quick) avoids a
     // flash of the inline spinner on every tap, which is what made
@@ -126,7 +126,7 @@ export default function CategoriesScreen() {
   }
 
   async function handleRefresh() {
-    if (!region) return;
+    if (!region || !activeSlug) return;
     setRefreshing(true);
     try {
       await loadRows(region.id, activeSlug, debouncedQuery);

@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getReservationQuestions } from "../utils/reservation-questions";
-import { saveCategoryProfile } from "../api/category-profile";
+import { deleteCategoryProfile, saveCategoryProfile } from "../api/category-profile";
 import { colors, fontSize, fontWeight, radius, spacing } from "../theme";
 
 const TIP_SEEN_KEY = "categoryProfileTipSeen";
@@ -58,6 +58,7 @@ export function CategoryProfileButton({
   const [showTip, setShowTip] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -109,6 +110,21 @@ export function CategoryProfileButton({
     }
   }
 
+  async function handleReset() {
+    setResetting(true);
+    setError(null);
+    try {
+      await deleteCategoryProfile(categorySlug);
+      setValues({});
+      setOpen(false);
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "초기화에 실패했어요.");
+    } finally {
+      setResetting(false);
+    }
+  }
+
   return (
     <View>
       <Pressable onPress={handleOpen} style={styles.button}>
@@ -132,7 +148,14 @@ export function CategoryProfileButton({
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
-            <Text style={styles.sheetTitle}>내 정보 입력</Text>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>내 정보 입력</Text>
+              {initialAnswers && (
+                <Pressable onPress={handleReset} disabled={resetting} hitSlop={8}>
+                  <Text style={styles.resetText}>{resetting ? "초기화 중..." : "초기화"}</Text>
+                </Pressable>
+              )}
+            </View>
             <Text style={styles.sheetHint}>
               업체 목록에서 이 정보를 기준으로 예상 가격을 보여드려요.
             </Text>
@@ -274,7 +297,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl,
     padding: spacing.lg,
   },
+  sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sheetTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
+  resetText: {
+    fontSize: fontSize.xs,
+    color: colors.textFaint,
+    textDecorationLine: "underline",
+  },
   sheetHint: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textFaint },
   importRow: {
     marginTop: spacing.sm + 2,

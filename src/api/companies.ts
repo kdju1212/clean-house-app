@@ -49,29 +49,6 @@ export async function searchCompanies(params: {
   );
 }
 
-export type CompanySearchAllResponse = {
-  region: { id: string; name: string };
-  rows: CompanyRow[];
-};
-
-/** Backs the categories screen's "전체" tab — every ACTIVE company serving
- * this region across all categories, no ad section (see the web home
- * page's searchCompaniesForRegion for why). */
-export async function searchAllCompanies(params: {
-  regionId: string;
-  maxPrice?: number;
-  query?: string;
-}): Promise<CompanySearchAllResponse> {
-  const query = new URLSearchParams({ regionId: params.regionId });
-  if (params.maxPrice) query.set("maxPrice", String(params.maxPrice));
-  if (params.query) query.set("q", params.query);
-
-  return apiFetch<CompanySearchAllResponse>(
-    `/api/mobile/companies/all?${query.toString()}`,
-    { auth: false }
-  );
-}
-
 export type CompanyDetailService = {
   id: string;
   categoryId: string;

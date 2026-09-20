@@ -35,15 +35,15 @@ export function CategoryNavBar({
 }: {
   categories: { slug: string; name: string }[];
   activeSlug: string | null;
-  onSelect: (slug: string | null) => void;
+  onSelect: (slug: string) => void;
 }) {
   const scrollRef = useRef<ScrollView>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [itemLayouts, setItemLayouts] = useState<Record<string, Layout>>({});
 
   useEffect(() => {
-    const key = activeSlug ?? "all";
-    const layout = itemLayouts[key];
+    if (!activeSlug) return;
+    const layout = itemLayouts[activeSlug];
     if (!layout || containerWidth === 0) return;
     const x = Math.max(0, layout.x - containerWidth / 2 + layout.width / 2);
     scrollRef.current?.scrollTo({ x, animated: true });
@@ -61,12 +61,6 @@ export function CategoryNavBar({
       onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       contentContainerStyle={styles.container}
     >
-      <Pill
-        label="전체"
-        active={activeSlug === null}
-        onPress={() => onSelect(null)}
-        onLayout={(layout) => handleItemLayout("all", layout)}
-      />
       {categories.map((c) => (
         <Pill
           key={c.slug}

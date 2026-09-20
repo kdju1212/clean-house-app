@@ -32,3 +32,8 @@ export async function saveCategoryProfile(
   );
   return result.answers;
 }
+
+/** The "초기화" button's action — clears a saved profile entirely. */
+export async function deleteCategoryProfile(categorySlug: string): Promise<void> {
+  await apiFetch(`/api/mobile/category-profile/${categorySlug}`, { method: "DELETE" });
+}
