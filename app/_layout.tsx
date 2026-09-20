@@ -37,6 +37,10 @@ export default function RootLayout() {
           },
         ]
       );
+    }, () => {
+      // checkForApkUpdate already catches internally and resolves to null —
+      // this is just a last-resort net so nothing here can ever take the
+      // app down.
     });
 
     // Fires when the user taps a notification while the app is running

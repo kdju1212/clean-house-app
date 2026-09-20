@@ -1,6 +1,4 @@
 import { Platform } from "react-native";
-import * as Application from "expo-application";
-import * as IntentLauncher from "expo-intent-launcher";
 import { Directory, File, Paths } from "expo-file-system";
 import { getContentUriAsync } from "expo-file-system/legacy";
 
@@ -43,33 +41,43 @@ function isNewer(remote: string, current: string): boolean {
  * Checks this app's public GitHub repo for a newer release with an APK
  * attached. Android only — a sideloaded install prompt has no iOS
  * equivalent, and this app isn't distributed through the App Store.
+ *
+ * expo-application and expo-intent-launcher are imported dynamically
+ * (inside the try/catch below) rather than at the top of this file: an OTA
+ * update ships this JS to devices that installed an older native build
+ * without those packages compiled in yet, and a static `import` of a
+ * missing native module throws the moment this module is evaluated —
+ * before this function even runs — which would take down app/_layout.tsx
+ * (and with it, the whole app) for anyone not yet on the native build that
+ * introduced this feature.
  */
 export async function checkForApkUpdate(): Promise<ApkUpdateInfo | null> {
   if (Platform.OS !== "android") return null;
 
-  const currentVersion = Application.nativeApplicationVersion ?? "0.0.0";
-
-  let release: GithubRelease;
   try {
+    const Application = await import("expo-application");
+    const currentVersion = Application.nativeApplicationVersion ?? "0.0.0";
+
     const res = await fetch(LATEST_RELEASE_URL);
     if (!res.ok) return null;
-    release = await res.json();
+    const release: GithubRelease = await res.json();
+
+    if (!isNewer(release.tag_name, currentVersion)) return null;
+
+    const apkAsset = release.assets.find((a) => a.name.endsWith(".apk"));
+    if (!apkAsset) return null;
+
+    return {
+      version: release.tag_name,
+      apkUrl: apkAsset.browser_download_url,
+      releaseNotes: release.body,
+    };
   } catch {
-    // No network, GitHub unreachable, rate-limited, etc. — just skip the
-    // check silently rather than bothering the user about it.
+    // Missing native module (older build), no network, GitHub unreachable,
+    // rate-limited, etc. — just skip the check silently rather than
+    // bothering the user, and definitely never let this take the app down.
     return null;
   }
-
-  if (!isNewer(release.tag_name, currentVersion)) return null;
-
-  const apkAsset = release.assets.find((a) => a.name.endsWith(".apk"));
-  if (!apkAsset) return null;
-
-  return {
-    version: release.tag_name,
-    apkUrl: apkAsset.browser_download_url,
-    releaseNotes: release.body,
-  };
 }
 
 /**
@@ -79,6 +87,7 @@ export async function checkForApkUpdate(): Promise<ApkUpdateInfo | null> {
  * never installs silently in the background.
  */
 export async function downloadAndInstallApk(apkUrl: string): Promise<void> {
+  const IntentLauncher = await import("expo-intent-launcher");
   const file = await File.downloadFileAsync(apkUrl, new Directory(Paths.cache), {
     idempotent: true,
   });
