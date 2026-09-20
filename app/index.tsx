@@ -3,13 +3,16 @@ import { Redirect } from "expo-router";
 import { getStoredToken, getStoredUser, getSelectedRegion } from "../src/storage/auth-storage";
 import { LoadingView } from "../src/components/LoadingView";
 
-type Destination = "loading" | "/login" | "/region-select" | "/categories" | "/company";
+type Destination = "loading" | "/login" | "/region-select" | "/categories" | "/reservations";
 
 /**
  * Entry route: figures out where to send the user before anything else
- * renders. Company owners skip region selection entirely (they don't
- * browse by region, they manage their own listing) and land straight on
- * their dashboard; customers go through the region -> category flow.
+ * renders. Company owners skip region selection (they don't need one to
+ * manage their own incoming reservations) and land straight on the
+ * 예약관리 tab — see app/(tabs)/reservations.tsx and app/(tabs)/_layout.tsx
+ * for how that same tab slot renders their business view instead of a
+ * customer's booking list. They can still reach 홈 to browse/book like any
+ * customer; picking a region only happens lazily if they tap into it.
  */
 export default function Index() {
   const [destination, setDestination] = useState<Destination>("loading");
@@ -25,7 +28,7 @@ export default function Index() {
 
         const user = await getStoredUser();
         if (user?.role === "COMPANY") {
-          setDestination("/company");
+          setDestination("/reservations");
           return;
         }
 

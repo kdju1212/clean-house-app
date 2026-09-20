@@ -12,6 +12,7 @@ import { LoadingView } from "../../src/components/LoadingView";
 import { Card } from "../../src/components/Card";
 import { Button } from "../../src/components/Button";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
+import CompanyProfileScreen from "../company/profile";
 
 const PROVIDER_LABEL: Record<string, string> = {
   google: "Google",
@@ -25,17 +26,35 @@ const RESERVATION_SUMMARY = [
   { key: "completed", label: "완료" },
 ] as const;
 
-export default function MyPageScreen() {
+/**
+ * The 마이페이지/업체 프로필관리 tab — same slot as app/(tabs)/reservations.tsx's
+ * role switch, and for the same reason: checked on every focus so a fresh
+ * registration (done from a screen pushed on top of this tab, not a
+ * remount of it) flips this over without needing a full app restart.
+ */
+export default function MyPageTabScreen() {
+  const [isCompany, setIsCompany] = useState<boolean | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      getStoredUser().then((user) => setIsCompany(user?.role === "COMPANY"));
+    }, [])
+  );
+
+  if (isCompany === null) {
+    return <LoadingView />;
+  }
+
+  return isCompany ? <CompanyProfileScreen /> : <CustomerMyPageView />;
+}
+
+function CustomerMyPageView() {
   const [data, setData] = useState<MyPageData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  // Hides the "사장님이신가요?" prompt for an account that already is
-  // one — it'd otherwise dangle here even once the 업체 관리 tab (see
-  // app/(tabs)/_layout.tsx) is already showing the same account's company.
-  const [isCompany, setIsCompany] = useState(false);
 
   const load = useCallback(() => {
     return fetchMyPage().then((result) => {
@@ -43,12 +62,6 @@ export default function MyPageScreen() {
       setPhone(result.user.phone ? formatPhoneNumber(result.user.phone) : "");
     });
   }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      getStoredUser().then((user) => setIsCompany(user?.role === "COMPANY"));
-    }, [])
-  );
 
   useFocusEffect(
     useCallback(() => {
@@ -218,11 +231,9 @@ export default function MyPageScreen() {
         )}
       </Card>
 
-      {!isCompany && (
-        <Pressable onPress={() => router.push("/company-register")} style={styles.companyLink}>
-          <Text style={styles.companyLinkText}>사장님이신가요? 업체 등록하기</Text>
-        </Pressable>
-      )}
+      <Pressable onPress={() => router.push("/company-register")} style={styles.companyLink}>
+        <Text style={styles.companyLinkText}>사장님이신가요? 업체 등록하기</Text>
+      </Pressable>
 
       <Pressable onPress={handleLogout} style={styles.logoutButton}>
         <Text style={styles.logout}>로그아웃</Text>

@@ -13,22 +13,15 @@ const ICONS: Record<string, string> = {
   categories: "🏠",
   reservations: "📋",
   mypage: "👤",
-  company: "🏢",
 };
 
 /**
- * Bottom tab bar for every logged-in account — 홈/내 예약/마이페이지 for
- * everyone, plus a 4th 업체 관리 tab that only a COMPANY-role account sees
- * (an account can be both: nothing here stops a company owner from also
- * browsing/booking like any other customer). Replaces the earlier design
- * where a COMPANY login was routed into a totally separate app/company/
- * Tabs layout with no way back into the customer screens.
- *
- * `href: null` (rather than leaving the screen out of the JSX entirely) is
- * the documented way to register a route without giving it a tab bar item
- * — needed here since the role is only known after an async AsyncStorage
- * read, so the tab has to be able to toggle visibility after first mount
- * rather than being decided once at JSX-authoring time.
+ * Bottom tab bar for every logged-in account — 홈은 그대로 두고, 나머지 두
+ * 탭(내 예약/마이페이지)의 내용과 이름을 계정 역할에 따라 통째로 바꾼다:
+ * COMPANY 계정은 같은 자리에서 "예약관리"(자기 업체로 들어온 예약,
+ * app/(tabs)/reservations.tsx 참고)와 "업체 프로필관리"
+ * (app/(tabs)/mypage.tsx 참고)를 본다. 홈은 역할과 무관하게 그대로 둬서
+ * 업체 사장님도 다른 업체를 둘러보거나 예약할 수 있다.
  */
 export default function TabsLayout() {
   const [isCompany, setIsCompany] = useState(false);
@@ -38,8 +31,8 @@ export default function TabsLayout() {
   // plain mount-only effect would miss a role flip that happens mid-session
   // — e.g. registering a company from the 마이페이지 link (a screen pushed
   // on top of this layout, not a remount of it) then getting replaced back
-  // to /company. Re-checking on every route change catches that the moment
-  // navigation actually lands here.
+  // here. Re-checking on every route change catches that the moment
+  // navigation actually lands back on a tab.
   useEffect(() => {
     getStoredUser().then((user) => setIsCompany(user?.role === "COMPANY"));
   }, [pathname]);
@@ -58,12 +51,8 @@ export default function TabsLayout() {
       })}
     >
       <Tabs.Screen name="categories" options={{ title: "홈" }} />
-      <Tabs.Screen name="reservations" options={{ title: "내 예약" }} />
-      <Tabs.Screen name="mypage" options={{ title: "마이페이지" }} />
-      <Tabs.Screen
-        name="company"
-        options={{ title: "업체 관리", href: isCompany ? undefined : null }}
-      />
+      <Tabs.Screen name="reservations" options={{ title: isCompany ? "예약관리" : "내 예약" }} />
+      <Tabs.Screen name="mypage" options={{ title: isCompany ? "업체 프로필관리" : "마이페이지" }} />
     </Tabs>
   );
 }

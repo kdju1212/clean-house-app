@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { File } from "expo-file-system";
 import {
@@ -14,6 +14,7 @@ import {
   type CompanyMe,
   type CompanyPhoto,
 } from "../../src/api/company";
+import { logout } from "../../src/api/auth";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchRegionGroups, type RegionGroupHit } from "../../src/api/regions";
 import {
@@ -52,6 +53,11 @@ export default function CompanyProfileScreen() {
     } finally {
       setRefreshing(false);
     }
+  }
+
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
   }
 
   if (!data || !categories) {
@@ -104,6 +110,10 @@ export default function CompanyProfileScreen() {
       />
 
       <InfoSection company={data.company} onSaved={load} />
+
+      <Pressable onPress={handleLogout} style={styles.logoutButton}>
+        <Text style={styles.logout}>로그아웃</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -825,6 +835,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   subtitle: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textFaint },
+  logoutButton: { marginTop: spacing.xxl, alignSelf: "flex-start" },
+  logout: { fontSize: fontSize.base, color: colors.textFaint, textDecorationLine: "underline" },
   mainSlotWrap: { marginTop: spacing.lg },
   mainSlot: {
     width: "100%",

@@ -9,11 +9,12 @@ import { Button } from "../src/components/Button";
 import { colors, fontSize, fontWeight, spacing } from "../src/theme";
 
 /**
- * Standalone (not under app/company/_layout.tsx's Tabs) since the caller
- * is still a CUSTOMER at this point — no company tabs to show yet. Mirrors
- * clean_house's /company/register web page/register-form.tsx field for
- * field, hitting the same shared createCompanyForOwner validation via
- * /api/mobile/company/register.
+ * Standalone (outside the (tabs) group) since the caller is still a
+ * CUSTOMER at this point — the 예약관리/업체 프로필관리 tab content only
+ * shows up once the account is actually COMPANY (see
+ * app/(tabs)/_layout.tsx). Mirrors clean_house's /company/register web
+ * page/register-form.tsx field for field, hitting the same shared
+ * createCompanyForOwner validation via /api/mobile/company/register.
  */
 export default function CompanyRegisterScreen() {
   const [name, setName] = useState("");
@@ -45,7 +46,10 @@ export default function CompanyRegisterScreen() {
         businessHours: businessHours || undefined,
       });
       await updateStoredRole("COMPANY");
-      router.replace("/company");
+      // Land on 프로필관리 (mypage tab in COMPANY guise) rather than
+      // 예약관리 — right after registering there's nothing to manage yet,
+      // but plenty of profile/services/photos to set up.
+      router.replace("/mypage");
     } catch (err) {
       Alert.alert("등록 실패", err instanceof Error ? err.message : "등록에 실패했어요.");
     } finally {

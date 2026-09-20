@@ -19,11 +19,12 @@ export default function LoginScreen() {
   const [testRoleLoading, setTestRoleLoading] = useState<string | null>(null);
   // Same login either way — this only changes where a CUSTOMER-role
   // account lands afterward (an account already COMPANY always goes to
-  // /company regardless, since it has a company either way).
+  // 예약관리 regardless, since it has a company either way — see
+  // app/(tabs)/reservations.tsx for how that tab renders its business view).
   const [asCompany, setAsCompany] = useState(false);
 
   function destinationFor(role: "CUSTOMER" | "COMPANY" | "ADMIN"): string {
-    if (role === "COMPANY") return "/company";
+    if (role === "COMPANY") return "/reservations";
     return asCompany ? "/company-register" : "/region-select";
   }
 
