@@ -56,19 +56,14 @@ export default function CompanyDetailScreen() {
   const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  // Coupang-style tab nav: both sections always render (that's what lets a
-  // tab tap scroll to one), and which tab is highlighted tracks scroll
-  // position instead of hiding/showing content. The tab bar "pins" to the
-  // top by rendering a second, absolutely-positioned copy once scrolled
-  // past the inline one's natural position — RN's ScrollView
-  // stickyHeaderIndices doesn't reliably pin under the New Architecture, so
-  // this manual overlay is the version that's actually guaranteed to work.
+  // Tab nav: both sections always render (that's what lets a tab tap
+  // scroll to one), and which tab is highlighted tracks scroll position
+  // instead of hiding/showing content. The bar itself isn't pinned — it
+  // scrolls away with the rest of the page like any other section.
   const [activeTab, setActiveTab] = useState<"info" | "review">("info");
   const [tabBarHeight, setTabBarHeight] = useState(0);
-  const [tabBarNaturalY, setTabBarNaturalY] = useState(0);
   const [infoSectionY, setInfoSectionY] = useState(0);
   const [reviewSectionY, setReviewSectionY] = useState(0);
-  const [showFloatingTabBar, setShowFloatingTabBar] = useState(false);
   // Suppresses the scroll-driven tab highlight while a tab tap's own
   // scrollTo is still animating, so it doesn't flicker back mid-scroll.
   const scrollingToTabRef = useRef(false);
@@ -220,17 +215,8 @@ export default function CompanyDetailScreen() {
       lastScrollY.current = y;
     }
 
-    // The floating bar visually replaces the inline one right as the
-    // inline one's top edge reaches the safe-area line (insets.top) — not
-    // scroll offset 0 — since that's where it renders once pinned.
-    if (tabBarNaturalY > 0) {
-      const shouldFloat = y >= tabBarNaturalY - insets.top;
-      if (shouldFloat !== showFloatingTabBar) setShowFloatingTabBar(shouldFloat);
-    }
-
     if (!scrollingToTabRef.current && reviewSectionY > 0) {
-      const pinnedBarBottom = insets.top + tabBarHeight;
-      const shouldBeReview = y + pinnedBarBottom >= reviewSectionY - 1;
+      const shouldBeReview = y + tabBarHeight >= reviewSectionY - 1;
       const nextTab = shouldBeReview ? "review" : "info";
       if (nextTab !== activeTab) setActiveTab(nextTab);
     }
@@ -240,13 +226,7 @@ export default function CompanyDetailScreen() {
     setActiveTab(tab);
     scrollingToTabRef.current = true;
     const targetY = tab === "info" ? infoSectionY : reviewSectionY;
-    // The floating bar sits at screen y = insets.top once pinned, so the
-    // section needs to land just below insets.top + tabBarHeight, not
-    // just tabBarHeight (see the showFloatingTabBar comment above).
-    scrollRef.current?.scrollTo({
-      y: Math.max(targetY - insets.top - tabBarHeight, 0),
-      animated: true,
-    });
+    scrollRef.current?.scrollTo({ y: Math.max(targetY - tabBarHeight, 0), animated: true });
     setTimeout(() => {
       scrollingToTabRef.current = false;
     }, 600);
@@ -294,29 +274,6 @@ export default function CompanyDetailScreen() {
     r.photoUrls.map((url) => ({ key: `${r.id}-${url}`, url }))
   );
   const introText = selectedService?.description || company.introText;
-
-  function renderTabButtons() {
-    return (
-      <>
-        <Pressable
-          style={[styles.tabButton, activeTab === "info" && styles.tabButtonActive]}
-          onPress={() => scrollToTab("info")}
-        >
-          <Text style={[styles.tabButtonText, activeTab === "info" && styles.tabButtonTextActive]}>
-            정보
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.tabButton, activeTab === "review" && styles.tabButtonActive]}
-          onPress={() => scrollToTab("review")}
-        >
-          <Text style={[styles.tabButtonText, activeTab === "review" && styles.tabButtonTextActive]}>
-            {`리뷰${reviewCount > 0 ? ` ${reviewCount}` : ""}`}
-          </Text>
-        </Pressable>
-      </>
-    );
-  }
 
   return (
     <View style={styles.flex}>
@@ -385,14 +342,23 @@ export default function CompanyDetailScreen() {
           {introText && <Text style={styles.intro}>{introText}</Text>}
         </View>
 
-        <View
-          style={styles.tabBar}
-          onLayout={(e) => {
-            setTabBarHeight(e.nativeEvent.layout.height);
-            setTabBarNaturalY(e.nativeEvent.layout.y);
-          }}
-        >
-          {renderTabButtons()}
+        <View style={styles.tabBar} onLayout={(e) => setTabBarHeight(e.nativeEvent.layout.height)}>
+          <Pressable
+            style={[styles.tabButton, activeTab === "info" && styles.tabButtonActive]}
+            onPress={() => scrollToTab("info")}
+          >
+            <Text style={[styles.tabButtonText, activeTab === "info" && styles.tabButtonTextActive]}>
+              정보
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tabButton, activeTab === "review" && styles.tabButtonActive]}
+            onPress={() => scrollToTab("review")}
+          >
+            <Text style={[styles.tabButtonText, activeTab === "review" && styles.tabButtonTextActive]}>
+              {`리뷰${reviewCount > 0 ? ` ${reviewCount}` : ""}`}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.body} onLayout={(e) => setInfoSectionY(e.nativeEvent.layout.y)}>
@@ -479,10 +445,6 @@ export default function CompanyDetailScreen() {
           </Section>
         </View>
       </Screen>
-
-      {showFloatingTabBar && (
-        <View style={[styles.floatingTabBar, { top: insets.top }]}>{renderTabButtons()}</View>
-      )}
 
       {services.length > 0 && (
         <Animated.View
@@ -609,20 +571,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  // Shown in place of the inline tab bar once scrolled past it — see the
-  // showFloatingTabBar comment above CompanyDetailScreen's state.
-  floatingTabBar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    zIndex: 5,
-    elevation: 5,
   },
   tabButton: {
     flex: 1,
