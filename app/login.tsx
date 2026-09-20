@@ -17,6 +17,15 @@ export default function LoginScreen() {
   const [showTestLogin, setShowTestLogin] = useState(false);
   const [testSecret, setTestSecret] = useState("");
   const [testRoleLoading, setTestRoleLoading] = useState<string | null>(null);
+  // Same login either way — this only changes where a CUSTOMER-role
+  // account lands afterward (an account already COMPANY always goes to
+  // /company regardless, since it has a company either way).
+  const [asCompany, setAsCompany] = useState(false);
+
+  function destinationFor(role: "CUSTOMER" | "COMPANY" | "ADMIN"): string {
+    if (role === "COMPANY") return "/company";
+    return asCompany ? "/company-register" : "/region-select";
+  }
 
   async function handleKakaoLogin() {
     setLoading(true);
@@ -27,7 +36,7 @@ export default function LoginScreen() {
       // native module.
       const { accessToken } = await kakaoLogin();
       const user = await loginWithKakao(accessToken);
-      router.replace(user.role === "COMPANY" ? "/company" : "/region-select");
+      router.replace(destinationFor(user.role));
     } catch (err) {
       Alert.alert(
         "로그인 실패",
@@ -42,7 +51,7 @@ export default function LoginScreen() {
     setTestRoleLoading(role);
     try {
       const user = await loginWithTestAccount(testSecret, role);
-      router.replace(user.role === "COMPANY" ? "/company" : "/region-select");
+      router.replace(destinationFor(user.role));
     } catch (err) {
       Alert.alert(
         "테스트 로그인 실패",
@@ -55,8 +64,10 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>우리동네 청소업체</Text>
-      <Text style={styles.subtitle}>지역 청소업체를 찾고 바로 예약해보세요</Text>
+      <Text style={styles.title}>{asCompany ? "사장님 로그인" : "우리동네 청소업체"}</Text>
+      <Text style={styles.subtitle}>
+        {asCompany ? "로그인 후 업체 등록을 진행할게요" : "지역 청소업체를 찾고 바로 예약해보세요"}
+      </Text>
 
       <Button
         title="카카오로 로그인"
@@ -65,6 +76,12 @@ export default function LoginScreen() {
         variant="kakao"
         style={styles.kakaoButton}
       />
+
+      <Pressable onPress={() => setAsCompany((v) => !v)} style={styles.companyToggle}>
+        <Text style={styles.companyToggleText}>
+          {asCompany ? "고객으로 로그인할게요" : "사장님이신가요? 업체 등록하기"}
+        </Text>
+      </Pressable>
 
       <Pressable onPress={() => setShowTestLogin((v) => !v)} style={styles.testToggle}>
         <Text style={styles.testToggleText}>테스트 계정으로 로그인</Text>
@@ -115,6 +132,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   kakaoButton: { marginTop: spacing.xxxl + spacing.sm, width: "100%" },
+  companyToggle: { marginTop: spacing.lg, padding: spacing.xs },
+  companyToggleText: {
+    fontSize: fontSize.xs,
+    color: colors.textFaint,
+    textDecorationLine: "underline",
+  },
   testToggle: { marginTop: spacing.xl, padding: spacing.xs },
   testToggleText: { fontSize: fontSize.xs, color: colors.textFaint },
   testPanel: { marginTop: spacing.sm, width: "100%", gap: spacing.sm },
