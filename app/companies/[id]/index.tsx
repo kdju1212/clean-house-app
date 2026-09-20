@@ -5,6 +5,7 @@ import {
   Dimensions,
   Image,
   Linking,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -55,6 +56,9 @@ export default function CompanyDetailScreen() {
   const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  // One shared full-screen viewer for every photo on this screen (hero,
+  // review strip, per-review photos) — tap opens it, tap again closes it.
+  const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     initialCategoryId ?? null
   );
@@ -264,11 +268,12 @@ export default function CompanyDetailScreen() {
               onMomentumScrollEnd={handleGalleryScroll}
             >
               {galleryPhotos.map((photo) => (
-                <Image
-                  key={photo.id}
-                  source={{ uri: photo.url }}
-                  style={[styles.galleryImage, { width: SCREEN_WIDTH }]}
-                />
+                <Pressable key={photo.id} onPress={() => setZoomedPhoto(photo.url)}>
+                  <Image
+                    source={{ uri: photo.url }}
+                    style={[styles.galleryImage, { width: SCREEN_WIDTH }]}
+                  />
+                </Pressable>
               ))}
             </ScrollView>
             {galleryPhotos.length > 1 && (
@@ -354,7 +359,9 @@ export default function CompanyDetailScreen() {
             {reviewPhotos.length > 0 && (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewPhotoStrip}>
                 {reviewPhotos.map((photo) => (
-                  <Image key={photo.key} source={{ uri: photo.url }} style={styles.reviewPhotoThumb} />
+                  <Pressable key={photo.key} onPress={() => setZoomedPhoto(photo.url)}>
+                    <Image source={{ uri: photo.url }} style={styles.reviewPhotoThumb} />
+                  </Pressable>
                 ))}
               </ScrollView>
             )}
@@ -374,7 +381,9 @@ export default function CompanyDetailScreen() {
                 {review.photoUrls.length > 0 && (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewCardPhotoRow}>
                     {review.photoUrls.map((url) => (
-                      <Image key={url} source={{ uri: url }} style={styles.reviewPhoto} />
+                      <Pressable key={url} onPress={() => setZoomedPhoto(url)}>
+                        <Image source={{ uri: url }} style={styles.reviewPhoto} />
+                      </Pressable>
                     ))}
                   </ScrollView>
                 )}
@@ -422,6 +431,26 @@ export default function CompanyDetailScreen() {
           onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
         />
       )}
+
+      <Modal
+        visible={!!zoomedPhoto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setZoomedPhoto(null)}
+      >
+        <Pressable style={styles.zoomOverlay} onPress={() => setZoomedPhoto(null)}>
+          {zoomedPhoto && (
+            <Image source={{ uri: zoomedPhoto }} style={styles.zoomImage} resizeMode="contain" />
+          )}
+          <Pressable
+            style={styles.zoomCloseButton}
+            onPress={() => setZoomedPhoto(null)}
+            hitSlop={8}
+          >
+            <Text style={styles.zoomCloseText}>×</Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -564,4 +593,23 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   stickyBarButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.onPrimary },
+  zoomOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomImage: { width: "100%", height: "100%" },
+  zoomCloseButton: {
+    position: "absolute",
+    top: spacing.xxl,
+    right: spacing.xl,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomCloseText: { fontSize: 22, color: "#fff", lineHeight: 24 },
 });
