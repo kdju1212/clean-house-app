@@ -21,7 +21,10 @@ import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/them
 const POLL_INTERVAL_MS = 4000;
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // name is optional — only set when navigated here from the 내 채팅 list
+  // (see app/(tabs)/chats.tsx); a link that goes straight to a reservation's
+  // chat (from its detail page, a notification, ...) just shows no header.
+  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [myUserId, setMyUserId] = useState<string | null>(null);
@@ -71,6 +74,11 @@ export default function ChatScreen() {
       style={[styles.container, { paddingTop: insets.top + spacing.lg }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {name && (
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{name}</Text>
+        </View>
+      )}
       <FlatList
         ref={listRef}
         data={messages}
@@ -110,6 +118,13 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm },
   bubbleRow: { flexDirection: "row" },
   bubbleRowMine: { justifyContent: "flex-end" },
