@@ -56,17 +56,6 @@ export default function CompanyDetailScreen() {
   const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  // Tab nav: both sections always render (that's what lets a tab tap
-  // scroll to one), and which tab is highlighted tracks scroll position
-  // instead of hiding/showing content. The bar itself isn't pinned — it
-  // scrolls away with the rest of the page like any other section.
-  const [activeTab, setActiveTab] = useState<"info" | "review">("info");
-  const [tabBarHeight, setTabBarHeight] = useState(0);
-  const [infoSectionY, setInfoSectionY] = useState(0);
-  const [reviewSectionY, setReviewSectionY] = useState(0);
-  // Suppresses the scroll-driven tab highlight while a tab tap's own
-  // scrollTo is still animating, so it doesn't flicker back mid-scroll.
-  const scrollingToTabRef = useRef(false);
   // One shared full-screen viewer for every photo on this screen (hero,
   // review strip, per-review photos) — tap opens it, tap again closes it.
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
@@ -214,22 +203,6 @@ export default function CompanyDetailScreen() {
       }
       lastScrollY.current = y;
     }
-
-    if (!scrollingToTabRef.current && reviewSectionY > 0) {
-      const shouldBeReview = y + tabBarHeight >= reviewSectionY - 1;
-      const nextTab = shouldBeReview ? "review" : "info";
-      if (nextTab !== activeTab) setActiveTab(nextTab);
-    }
-  }
-
-  function scrollToTab(tab: "info" | "review") {
-    setActiveTab(tab);
-    scrollingToTabRef.current = true;
-    const targetY = tab === "info" ? infoSectionY : reviewSectionY;
-    scrollRef.current?.scrollTo({ y: Math.max(targetY - tabBarHeight, 0), animated: true });
-    setTimeout(() => {
-      scrollingToTabRef.current = false;
-    }, 600);
   }
 
   function handleGalleryScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -336,32 +309,22 @@ export default function CompanyDetailScreen() {
               <Text style={styles.favoriteIcon}>{isFavorited ? "♥" : "♡"}</Text>
             </Pressable>
           </View>
-          <Text style={styles.ratingLine}>
-            {reviewCount > 0 ? `★ ${averageRating.toFixed(1)} 리뷰 ${reviewCount}개` : "아직 리뷰가 없어요"}
-          </Text>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/companies/[id]/reviews",
+                params: { id, name: company.name },
+              })
+            }
+          >
+            <Text style={styles.ratingLine}>
+              {reviewCount > 0
+                ? `★ ${averageRating.toFixed(1)} 리뷰 ${reviewCount}개 >`
+                : "아직 리뷰가 없어요"}
+            </Text>
+          </Pressable>
           {introText && <Text style={styles.intro}>{introText}</Text>}
-        </View>
 
-        <View style={styles.tabBar} onLayout={(e) => setTabBarHeight(e.nativeEvent.layout.height)}>
-          <Pressable
-            style={[styles.tabButton, activeTab === "info" && styles.tabButtonActive]}
-            onPress={() => scrollToTab("info")}
-          >
-            <Text style={[styles.tabButtonText, activeTab === "info" && styles.tabButtonTextActive]}>
-              정보
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.tabButton, activeTab === "review" && styles.tabButtonActive]}
-            onPress={() => scrollToTab("review")}
-          >
-            <Text style={[styles.tabButtonText, activeTab === "review" && styles.tabButtonTextActive]}>
-              {`리뷰${reviewCount > 0 ? ` ${reviewCount}` : ""}`}
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.body} onLayout={(e) => setInfoSectionY(e.nativeEvent.layout.y)}>
           <Section title="서비스 · 가격">
             {services.map((service) => {
               const isSelected = service.categoryId === (selectedService?.categoryId ?? null);
@@ -404,9 +367,7 @@ export default function CompanyDetailScreen() {
               )}
             </View>
           </Section>
-        </View>
 
-        <View style={styles.body} onLayout={(e) => setReviewSectionY(e.nativeEvent.layout.y)}>
           <Section title={`리뷰${reviewCount > 0 ? ` (${reviewCount})` : ""}`}>
             <RatingDistribution averageRating={averageRating} reviews={reviews} />
             {reviewPhotos.length > 0 && (
@@ -558,31 +519,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
   },
   galleryPlaceholderEmoji: { fontSize: 48 },
-  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.lg },
+  body: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   nameRow: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.sm - 2, flexShrink: 1 },
   name: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text, flexShrink: 1 },
   favoriteIcon: { fontSize: 26, color: colors.danger },
   ratingLine: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.textMuted },
   intro: { marginTop: spacing.sm, fontSize: fontSize.base, color: colors.text },
-  tabBar: {
-    flexDirection: "row",
-    paddingHorizontal: spacing.xl,
-    backgroundColor: colors.bg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-    marginBottom: -1,
-  },
-  tabButtonActive: { borderBottomColor: colors.primary },
-  tabButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.textFaint },
-  tabButtonTextActive: { color: colors.text, fontWeight: fontWeight.semibold },
   section: { marginTop: spacing.xl },
   sectionTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
   sectionBody: { marginTop: spacing.sm },
