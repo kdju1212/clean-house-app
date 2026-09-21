@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-nativ
 import { router } from "expo-router";
 import { login as kakaoLogin } from "@react-native-seoul/kakao-login";
 import { loginWithKakao, loginWithTestAccount } from "../src/api/auth";
+import { getSelectedRegion } from "../src/storage/auth-storage";
 import { Button } from "../src/components/Button";
 import { colors, fontSize, fontWeight, radius, spacing } from "../src/theme";
 
@@ -23,9 +24,22 @@ export default function LoginScreen() {
   // app/(tabs)/reservations.tsx for how that tab renders its business view).
   const [asCompany, setAsCompany] = useState(false);
 
-  function destinationFor(role: "CUSTOMER" | "COMPANY" | "ADMIN"): string {
-    if (role === "COMPANY") return "/reservations";
-    return asCompany ? "/company-register" : "/region-select";
+  // Always lands on a real screen with something behind it in the nav
+  // stack — company-register used to be reached via a bare replace(), so
+  // there was nothing to pop back to and the Android back button just
+  // exited the app instead of taking the customer anywhere. Now it's
+  // pushed on top of the normal customer destination, so backing out of
+  // it just drops them into the app as a customer.
+  async function navigateAfterLogin(role: "CUSTOMER" | "COMPANY" | "ADMIN") {
+    if (role === "COMPANY") {
+      router.replace("/reservations");
+      return;
+    }
+    const region = await getSelectedRegion();
+    router.replace(region ? "/categories" : "/region-select");
+    if (asCompany) {
+      router.push("/company-register");
+    }
   }
 
   async function handleKakaoLogin() {
@@ -37,7 +51,7 @@ export default function LoginScreen() {
       // native module.
       const { accessToken } = await kakaoLogin();
       const user = await loginWithKakao(accessToken);
-      router.replace(destinationFor(user.role));
+      await navigateAfterLogin(user.role);
     } catch (err) {
       Alert.alert(
         "로그인 실패",
@@ -52,7 +66,7 @@ export default function LoginScreen() {
     setTestRoleLoading(role);
     try {
       const user = await loginWithTestAccount(testSecret, role);
-      router.replace(destinationFor(user.role));
+      await navigateAfterLogin(user.role);
     } catch (err) {
       Alert.alert(
         "테스트 로그인 실패",
