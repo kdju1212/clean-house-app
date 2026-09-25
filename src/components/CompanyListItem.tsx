@@ -24,8 +24,8 @@ export function CompanyListItem({
 }) {
   const meta = [
     isAd ? "광고" : null,
-    company.regionNames.join(", ") || null,
     company.reviewCount > 0 ? `★ ${company.rating.toFixed(1)}` : null,
+    company.regionNames.join(", ") || null,
   ]
     .filter(Boolean)
     .join(" · ");
