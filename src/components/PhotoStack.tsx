@@ -6,7 +6,7 @@ import { colors, fontSize, fontWeight, radius, spacing } from "../theme";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 // Coupang-style "더 보기" fold height — enough to show a couple of photos'
 // worth before the customer has to opt into the rest.
-const COLLAPSED_HEIGHT = 600;
+const COLLAPSED_HEIGHT = 1000;
 
 export type PhotoItem = { id: string; url: string };
 
