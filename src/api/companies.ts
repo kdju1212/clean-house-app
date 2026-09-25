@@ -18,6 +18,9 @@ export type CompanyRow = {
   estimatedPrice: number | null;
   rating: number;
   reviewCount: number;
+  // Count of this company's COMPLETED reservations — see
+  // searchCompaniesInCategory on the web repo.
+  completedCount: number;
   regionNames: string[];
 };
 

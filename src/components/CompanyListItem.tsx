@@ -25,7 +25,9 @@ export function CompanyListItem({
   const meta = [
     isAd ? "광고" : null,
     company.reviewCount > 0 ? `★ ${company.rating.toFixed(1)}` : null,
-    company.regionNames.join(", ") || null,
+    company.completedCount > 0
+      ? `시공 ${company.completedCount.toLocaleString()}건`
+      : company.regionNames.join(", ") || null,
   ]
     .filter(Boolean)
     .join(" · ");
