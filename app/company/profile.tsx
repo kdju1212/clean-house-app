@@ -11,8 +11,11 @@ import {
   setCompanyRegions,
   uploadCompanyPhoto,
   deleteCompanyPhoto,
+  updateCompanyPhotoCaption,
+  updateDetailPageMode,
   type CompanyMe,
   type CompanyPhoto,
+  type DetailPageMode,
 } from "../../src/api/company";
 import { logout } from "../../src/api/auth";
 import { fetchCategories, type Category } from "../../src/api/categories";
@@ -27,6 +30,7 @@ import { LoadingView } from "../../src/components/LoadingView";
 import { Button } from "../../src/components/Button";
 import { TextField } from "../../src/components/TextField";
 import { PhotoStack } from "../../src/components/PhotoStack";
+import { PhotoGrid } from "../../src/components/PhotoGrid";
 import { formatPhoneNumber } from "../../src/utils/phone";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
@@ -87,10 +91,10 @@ export default function CompanyProfileScreen() {
 
       <ServicesSection services={data.services} categories={categories} onChanged={load} />
 
-      <PhotoStackSection
-        title="상세페이지"
+      <DetailPageSection
         photos={workPhotos}
         services={data.services}
+        detailPageMode={data.company.detailPageMode}
         onChanged={load}
       />
 
@@ -406,13 +410,100 @@ function ServicesSection({
   );
 }
 
+/** "상세페이지" section — a mode toggle (직접 올리기/내 사이트 템플릿) on
+ * top of whichever editor matches the company's current detailPageMode.
+ * Mode switches optimistically, same pattern as the web dashboard. */
+function DetailPageSection({
+  photos,
+  services,
+  detailPageMode,
+  onChanged,
+}: {
+  photos: CompanyPhoto[];
+  services: CompanyMe["services"];
+  detailPageMode: DetailPageMode;
+  onChanged: () => void;
+}) {
+  const [mode, setMode] = useState<DetailPageMode>(detailPageMode);
+  const [modeError, setModeError] = useState<string | null>(null);
+
+  async function handleModeChange(next: DetailPageMode) {
+    if (next === mode) return;
+    const previous = mode;
+    setMode(next);
+    setModeError(null);
+    try {
+      await updateDetailPageMode(next);
+    } catch (err) {
+      setMode(previous);
+      setModeError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    }
+  }
+
+  return (
+    <Section title="상세페이지">
+      <View style={styles.modeRow}>
+        <Pressable
+          onPress={() => handleModeChange("CUSTOM_IMAGE")}
+          style={[styles.modeCard, mode === "CUSTOM_IMAGE" && styles.modeCardActive]}
+        >
+          <Text style={styles.modeCardTitle}>직접 올리기</Text>
+          <Text style={styles.modeCardDesc}>준비한 세로로 긴 이미지를 그대로</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => handleModeChange("SITE_TEMPLATE")}
+          style={[styles.modeCard, mode === "SITE_TEMPLATE" && styles.modeCardActive]}
+        >
+          <Text style={styles.modeCardTitle}>내 사이트 템플릿</Text>
+          <Text style={styles.modeCardDesc}>사진 여러 장을 올리면 자동으로 꾸며드려요</Text>
+        </Pressable>
+      </View>
+      {modeError && <Text style={styles.errorText}>{modeError}</Text>}
+
+      {mode === "SITE_TEMPLATE" ? (
+        <PhotoGridSection photos={photos} services={services} onChanged={onChanged} />
+      ) : (
+        <PhotoStackSection photos={photos} services={services} onChanged={onChanged} />
+      )}
+    </Section>
+  );
+}
+
+/** Which category the *next* uploaded photo gets tagged with — shared by
+ * PhotoStackSection and PhotoGridSection. Hidden when there's nothing to
+ * distinguish (0 or 1 registered service). */
+function CategoryChipPicker({
+  value,
+  onChange,
+  services,
+}: {
+  value: string | null;
+  onChange: (categoryId: string) => void;
+  services: CompanyMe["services"];
+}) {
+  if (services.length <= 1) return null;
+  return (
+    <View style={styles.chipRow}>
+      {services.map((s) => (
+        <Pressable
+          key={s.categoryId}
+          style={[styles.chip, value === s.categoryId && styles.chipActive]}
+          onPress={() => onChange(s.categoryId)}
+        >
+          <Text style={[styles.chipText, value === s.categoryId && styles.chipTextActive]}>
+            {s.categoryName}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 function PhotoStackSection({
-  title,
   photos,
   services,
   onChanged,
 }: {
-  title: string;
   photos: CompanyPhoto[];
   // Offered as "이 사진, 어떤 카테고리 사진인가요?" tag choices — only one
   // registered service means there's nothing to distinguish, so the
@@ -429,28 +520,8 @@ function PhotoStackSection({
 
   return (
     <View style={styles.photoStackSection}>
-      {services.length > 1 && (
-        <View style={styles.chipRow}>
-          {services.map((s) => (
-            <Pressable
-              key={s.categoryId}
-              style={[styles.chip, uploadCategoryId === s.categoryId && styles.chipActive]}
-              onPress={() => setUploadCategoryId(s.categoryId)}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  uploadCategoryId === s.categoryId && styles.chipTextActive,
-                ]}
-              >
-                {s.categoryName}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <CategoryChipPicker value={uploadCategoryId} onChange={setUploadCategoryId} services={services} />
       <PhotoStack
-        title={title}
         photos={photos}
         photoOverlay={(photo) => (
           <>
@@ -480,6 +551,91 @@ function PhotoStackSection({
         }
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+}
+
+/** "내 사이트 템플릿" mode — same upload/tag/delete flow as
+ * PhotoStackSection, laid out as a grid with an editable caption under
+ * each photo instead of one continuous stacked image. */
+function PhotoGridSection({
+  photos,
+  services,
+  onChanged,
+}: {
+  photos: CompanyPhoto[];
+  services: CompanyMe["services"];
+  onChanged: () => void;
+}) {
+  const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(
+    services[0]?.categoryId ?? null
+  );
+  const { uploading, error, pick } = useCompanyPhotoUpload("WORK", uploadCategoryId, onChanged);
+
+  return (
+    <View style={styles.photoStackSection}>
+      <CategoryChipPicker value={uploadCategoryId} onChange={setUploadCategoryId} services={services} />
+      <PhotoGrid
+        photos={photos}
+        photoOverlay={(photo) => (
+          <Pressable
+            onPress={() => {
+              deleteCompanyPhoto(photo.id).then(onChanged);
+            }}
+            style={styles.gridPhotoDeleteButton}
+          >
+            <Text style={styles.photoDeleteButtonText}>×</Text>
+          </Pressable>
+        )}
+        captionSlot={(photo) => (
+          <CaptionInput photoId={photo.id} initialCaption={photo.caption} />
+        )}
+        extraTile={
+          <Pressable onPress={pick} disabled={uploading} style={styles.addPhotoTile}>
+            <Text style={styles.addPhotoTileText}>
+              {uploading ? "업로드중" : "+ 사진 추가"}
+            </Text>
+          </Pressable>
+        }
+      />
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+}
+
+/** Saves on blur rather than per-keystroke — a caption per grid tile, so
+ * typing shouldn't fire a request on every character. */
+function CaptionInput({
+  photoId,
+  initialCaption,
+}: {
+  photoId: string;
+  initialCaption: string | null;
+}) {
+  const [value, setValue] = useState(initialCaption ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleBlur() {
+    setError(null);
+    try {
+      await updateCompanyPhotoCaption(photoId, value);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    }
+  }
+
+  return (
+    <View>
+      <TextInput
+        value={value}
+        onChangeText={setValue}
+        onBlur={handleBlur}
+        placeholder="사진 설명 (선택)"
+        placeholderTextColor={colors.textFaint}
+        maxLength={60}
+        style={styles.captionInput}
+      />
+      {error && <Text style={styles.captionErrorText}>{error}</Text>}
     </View>
   );
 }
@@ -922,6 +1078,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  gridPhotoDeleteButton: {
+    position: "absolute",
+    right: spacing.xs,
+    top: spacing.xs,
+    width: 24,
+    height: 24,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  modeCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+  },
+  modeCardActive: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
+  modeCardTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  modeCardDesc: { marginTop: 2, fontSize: fontSize.xs, color: colors.textMuted },
+  captionInput: {
+    marginTop: spacing.xs + 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    fontSize: fontSize.sm,
+    color: colors.text,
+  },
+  captionErrorText: { marginTop: 2, fontSize: fontSize.xs, color: colors.danger },
   photoDeleteButtonText: { color: colors.onPrimary, fontSize: fontSize.md, lineHeight: fontSize.md },
   addPhotoTile: {
     marginTop: spacing.sm,

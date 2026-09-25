@@ -36,7 +36,9 @@ export function PhotoStack({
   extraTile,
   photoOverlay,
 }: {
-  title: string;
+  /** Omit when this stack is nested under a heading the caller already
+   * renders itself (e.g. the profile screen's mode-toggle wrapper). */
+  title?: string;
   photos: PhotoItem[];
   extraTile?: ReactNode;
   photoOverlay?: (photo: PhotoItem) => ReactNode;
@@ -70,7 +72,7 @@ export function PhotoStack({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      {title && <Text style={styles.sectionTitle}>{title}</Text>}
       <View style={[styles.stack, collapsible && styles.collapsed]}>
         {photos.map((photo) => {
           const ratio = ratios[photo.id];

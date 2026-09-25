@@ -67,6 +67,7 @@ export type CompanyDetailPhoto = {
   url: string;
   type: "MAIN" | "WORK" | "BEFORE_AFTER";
   categoryId: string | null;
+  caption: string | null;
 };
 
 export type CompanyReview = {
@@ -93,6 +94,7 @@ export type CompanyDetail = {
     // instead of navigating into our own reserve screen (see the detail
     // screen's handleReserveFromBar). Mirrors clean_house's Company.websiteUrl.
     websiteUrl: string | null;
+    detailPageMode: "CUSTOM_IMAGE" | "SITE_TEMPLATE";
   };
   services: CompanyDetailService[];
   photos: CompanyDetailPhoto[];

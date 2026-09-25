@@ -25,6 +25,7 @@ import { getStoredToken } from "../../../src/storage/auth-storage";
 import { Screen } from "../../../src/components/Screen";
 import { LoadingView } from "../../../src/components/LoadingView";
 import { PhotoStack } from "../../../src/components/PhotoStack";
+import { PhotoGrid } from "../../../src/components/PhotoGrid";
 import { RatingDistribution } from "../../../src/components/RatingDistribution";
 import { ScrollToTopButton } from "../../../src/components/ScrollToTopButton";
 import { Icon } from "../../../src/components/Icon";
@@ -383,7 +384,11 @@ export default function CompanyDetailScreen() {
           <View onLayout={(e) => setDetailY(e.nativeEvent.layout.y)}>
             <View style={styles.separator} />
             <View style={styles.photoSection}>
-              <PhotoStack title="상세페이지" photos={workPhotos} />
+              {company.detailPageMode === "SITE_TEMPLATE" ? (
+                <PhotoGrid title="상세페이지" photos={workPhotos} />
+              ) : (
+                <PhotoStack title="상세페이지" photos={workPhotos} />
+              )}
             </View>
           </View>
         )}

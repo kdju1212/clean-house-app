@@ -22,7 +22,12 @@ export type CompanyPhoto = {
   // Which category this photo belongs to (WORK/BEFORE_AFTER only) — null
   // means "shown for every category". See clean_house's CompanyPhoto model.
   categoryId: string | null;
+  // Shown under the photo when detailPageMode is SITE_TEMPLATE — ignored
+  // in CUSTOM_IMAGE mode.
+  caption: string | null;
 };
+
+export type DetailPageMode = "CUSTOM_IMAGE" | "SITE_TEMPLATE";
 
 export type CompanyMe = {
   company: {
@@ -35,6 +40,7 @@ export type CompanyMe = {
     businessHours: string | null;
     mainImageUrl: string | null;
     websiteUrl: string | null;
+    detailPageMode: DetailPageMode;
   };
   requestedCount: number;
   averageRating: number;
@@ -140,6 +146,14 @@ export async function uploadCompanyPhoto(
 
 export async function deleteCompanyPhoto(id: string): Promise<void> {
   await apiFetch(`/api/mobile/company/photos/${id}`, { method: "DELETE" });
+}
+
+export async function updateCompanyPhotoCaption(id: string, caption: string): Promise<void> {
+  await apiFetch(`/api/mobile/company/photos/${id}`, { method: "PATCH", body: { caption } });
+}
+
+export async function updateDetailPageMode(mode: DetailPageMode): Promise<void> {
+  await apiFetch("/api/mobile/company/detail-page-mode", { method: "PATCH", body: { mode } });
 }
 
 export type CompanyReservation = {
