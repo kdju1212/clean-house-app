@@ -275,6 +275,11 @@ export default function CompanyDetailScreen() {
                 <Text style={styles.trustText}>사업자등록을 마친 업체예요</Text>
               ) : null}
               <Text style={styles.name}>{company.name}</Text>
+              <View style={styles.statusTag}>
+                <Text style={styles.statusTagText}>
+                  {company.isAvailable ? "예약 가능" : "예약 마감"}
+                </Text>
+              </View>
             </View>
             <Pressable onPress={openReviews} style={styles.ratingBlock}>
               {reviewCount > 0 ? (
@@ -289,10 +294,6 @@ export default function CompanyDetailScreen() {
                 <Text style={styles.noReviews}>아직 리뷰가 없어요</Text>
               )}
             </Pressable>
-          </View>
-
-          <View style={styles.statusTag}>
-            <Text style={styles.statusTagText}>{company.isAvailable ? "예약 가능" : "예약 마감"}</Text>
           </View>
 
           {introText && (
@@ -616,7 +617,7 @@ const styles = StyleSheet.create({
 
   statusTag: {
     alignSelf: "flex-start",
-    marginTop: spacing.md,
+    marginTop: spacing.sm - 2,
     backgroundColor: "#6b7684",
     borderRadius: 4,
     paddingHorizontal: spacing.sm,
