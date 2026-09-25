@@ -14,6 +14,11 @@ const SOURCES = {
   tabCalendar: require("../../assets/icons/tabCalendar.png"),
   tabPerson: require("../../assets/icons/tabPerson.png"),
   chatSmall: require("../../assets/icons/chatSmall.png"),
+  chevronLeft: require("../../assets/icons/chevronLeft.png"),
+  chevronRight: require("../../assets/icons/chevronRight.png"),
+  heart: require("../../assets/icons/heart.png"),
+  heartFilled: require("../../assets/icons/heartFilled.png"),
+  sparkle: require("../../assets/icons/sparkle.png"),
 } as const;
 
 export type IconName = keyof typeof SOURCES;
