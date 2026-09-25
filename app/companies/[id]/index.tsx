@@ -84,9 +84,27 @@ export default function CompanyDetailScreen() {
   // Slides the reserve bar out of view while the customer is actively
   // reading down the page, back in when they scroll back up — restores
   // behavior lost when this screen was rewritten for the Coupang layout
-  // (see 6c3b7e4, before that rewrite).
+  // (see 6c3b7e4, 1770957, a657ebd, ea196e3, before that rewrite).
   const lastScrollY = useRef(0);
+  const barHidden = useRef(false);
   const [barTranslateY] = useState(() => new Animated.Value(0));
+  // How far the reserve bar has to travel to be fully off-screen.
+  const maxBarHide = barHeight + insets.bottom + spacing.xxl;
+  // Button's bottom edge when the bar is fully shown: exactly 7px above
+  // the bar's top edge (barHeight already includes the bar's own
+  // safe-area padding, so this is the bar's true top, not an approximation).
+  const buttonRestingBottom = barHeight + 7;
+  // Where the button belongs once the bar is fully hidden — the same spot
+  // it would sit at if there were no bar at all.
+  const buttonNoBarBottom = insets.bottom + spacing.xxl;
+  // Ties the button's position to the same Animated.Value the bar uses, so
+  // it drops down right along with the bar instead of floating in empty
+  // space above a hidden one.
+  const buttonTranslateY = barTranslateY.interpolate({
+    inputRange: [0, maxBarHide],
+    outputRange: [0, buttonRestingBottom - buttonNoBarBottom],
+    extrapolate: "clamp",
+  });
 
   const load = useCallback(() => {
     return Promise.all([
@@ -185,11 +203,19 @@ export default function CompanyDetailScreen() {
     // bar doesn't flicker — only react to an actual, deliberate scroll.
     if (Math.abs(diff) > 10) {
       const hide = diff > 0 && y > 80;
-      Animated.timing(barTranslateY, {
-        toValue: hide ? barHeight + insets.bottom + spacing.xxl : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      // Only start a new animation when the target actually flips —
+      // continuing to scroll in the same direction would otherwise keep
+      // re-triggering .start() every ~10px, restarting the in-flight
+      // animation from wherever it currently was and making it look
+      // stuttery instead of one clean slide.
+      if (hide !== barHidden.current) {
+        barHidden.current = hide;
+        Animated.timing(barTranslateY, {
+          toValue: hide ? maxBarHide : 0,
+          duration: 60,
+          useNativeDriver: true,
+        }).start();
+      }
       lastScrollY.current = y;
     }
   }
@@ -461,11 +487,20 @@ export default function CompanyDetailScreen() {
         </Animated.View>
       )}
 
-      <ScrollToTopButton
-        visible={showScrollTop}
-        bottomOffset={services.length > 0 ? barHeight + 7 : undefined}
-        onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-      />
+      {services.length > 0 ? (
+        <Animated.View style={{ transform: [{ translateY: buttonTranslateY }] }}>
+          <ScrollToTopButton
+            visible={showScrollTop}
+            bottomOffset={buttonRestingBottom}
+            onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+          />
+        </Animated.View>
+      ) : (
+        <ScrollToTopButton
+          visible={showScrollTop}
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+        />
+      )}
 
       {/* 옵션선택 bottom sheet */}
       <Modal
