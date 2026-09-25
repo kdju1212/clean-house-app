@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
   Linking,
@@ -80,6 +81,12 @@ export default function CompanyDetailScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
+  // Slides the reserve bar out of view while the customer is actively
+  // reading down the page, back in when they scroll back up — restores
+  // behavior lost when this screen was rewritten for the Coupang layout
+  // (see 6c3b7e4, before that rewrite).
+  const lastScrollY = useRef(0);
+  const [barTranslateY] = useState(() => new Animated.Value(0));
 
   const load = useCallback(() => {
     return Promise.all([
@@ -167,10 +174,24 @@ export default function CompanyDetailScreen() {
   }
 
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const y = e.nativeEvent.contentOffset.y;
     // Only touch state when the threshold is actually crossed — re-rendering
     // this screen on every scroll frame is what used to make it stutter.
-    const shouldShow = e.nativeEvent.contentOffset.y > 400;
+    const shouldShow = y > 400;
     if (shouldShow !== showScrollTop) setShowScrollTop(shouldShow);
+
+    const diff = y - lastScrollY.current;
+    // Ignore tiny jitters (rubber-banding, a light finger twitch) so the
+    // bar doesn't flicker — only react to an actual, deliberate scroll.
+    if (Math.abs(diff) > 10) {
+      const hide = diff > 0 && y > 80;
+      Animated.timing(barTranslateY, {
+        toValue: hide ? barHeight + insets.bottom + spacing.xxl : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      lastScrollY.current = y;
+    }
   }
 
   if (!data) {
@@ -416,9 +437,13 @@ export default function CompanyDetailScreen() {
       </Screen>
 
       {services.length > 0 && (
-        <View
+        <Animated.View
           onLayout={(e) => setBarHeight(e.nativeEvent.layout.height)}
-          style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}
+          style={[
+            styles.bottomBar,
+            { paddingBottom: insets.bottom + spacing.md },
+            { transform: [{ translateY: barTranslateY }] },
+          ]}
         >
           {company.phone && (
             <Pressable
@@ -433,7 +458,7 @@ export default function CompanyDetailScreen() {
               {company.websiteUrl ? "홈페이지에서 예약하기" : "예약하기"}
             </Text>
           </Pressable>
-        </View>
+        </Animated.View>
       )}
 
       <ScrollToTopButton
