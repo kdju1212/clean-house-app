@@ -261,7 +261,7 @@ export default function CompanyDetailScreen() {
 
         <View style={styles.body}>
           <View style={styles.trustRow}>
-            <View style={styles.trustTextWrap}>
+            <View style={styles.titleWrap}>
               {company.isVerified ? (
                 <View style={styles.trustLine}>
                   <View style={styles.trustCheck}>
@@ -274,6 +274,7 @@ export default function CompanyDetailScreen() {
               ) : company.hasBusinessRegistration ? (
                 <Text style={styles.trustText}>사업자등록을 마친 업체예요</Text>
               ) : null}
+              <Text style={styles.name}>{company.name}</Text>
             </View>
             <Pressable onPress={openReviews} style={styles.ratingBlock}>
               {reviewCount > 0 ? (
@@ -293,8 +294,6 @@ export default function CompanyDetailScreen() {
           <View style={styles.statusTag}>
             <Text style={styles.statusTagText}>{company.isAvailable ? "예약 가능" : "예약 마감"}</Text>
           </View>
-
-          <Text style={styles.name}>{company.name}</Text>
 
           {introText && (
             <View style={styles.introChip}>
@@ -597,8 +596,8 @@ const styles = StyleSheet.create({
 
   body: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   trustRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md },
-  trustTextWrap: { flex: 1, paddingTop: 2 },
-  trustLine: { flexDirection: "row", alignItems: "center", gap: 6 },
+  titleWrap: { flex: 1 },
+  trustLine: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
   trustCheck: {
     width: 20,
     height: 20,
@@ -608,11 +607,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   trustCheckText: { color: colors.onPrimary, fontSize: 11, fontWeight: fontWeight.bold },
-  trustText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
-  ratingBlock: { alignItems: "flex-end" },
+  trustText: { marginBottom: 4, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
+  ratingBlock: { alignItems: "flex-end", paddingTop: 2 },
   stars: { fontSize: 22, letterSpacing: -1 },
   ratingCount: { marginTop: 2, fontSize: fontSize.lg, color: BLUE },
   noReviews: { fontSize: fontSize.sm, color: colors.textFaint },
+  name: { fontSize: 19, lineHeight: 26, color: colors.text },
 
   statusTag: {
     alignSelf: "flex-start",
@@ -623,7 +623,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   statusTagText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.onPrimary },
-  name: { marginTop: spacing.md, fontSize: 19, lineHeight: 26, color: colors.text },
 
   introChip: {
     alignSelf: "flex-start",
