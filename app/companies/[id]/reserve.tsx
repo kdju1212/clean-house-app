@@ -6,6 +6,7 @@ import { createReservation } from "../../../src/api/reservations";
 import { fetchAddressByCoords } from "../../../src/api/address";
 import { fetchCategoryProfile } from "../../../src/api/category-profile";
 import { fetchCompanyDetail, type CompanyDetailService } from "../../../src/api/companies";
+import { CalendarDatePicker, todayDateStr } from "../../../src/components/CalendarDatePicker";
 import { getSelectedRegion, getStoredUser, updateStoredPhone } from "../../../src/storage/auth-storage";
 import {
   getPricingQuantityKey,
@@ -265,11 +266,12 @@ export default function ReserveScreen() {
       {locateError && <Text style={styles.errorText}>{locateError}</Text>}
       <TextField value={addressDetail} onChangeText={setAddressDetail} placeholder="상세 주소 (선택)" />
 
-      <TextField
-        label="희망 날짜 (YYYY-MM-DD)"
+      <CalendarDatePicker
+        label="희망 날짜"
         value={desiredDate}
-        onChangeText={setDesiredDate}
-        placeholder="2026-01-15"
+        onChange={setDesiredDate}
+        minDateStr={todayDateStr()}
+        blockedDates={blockedDates}
       />
       {isDesiredDateBlocked && (
         <Text style={styles.errorText}>
