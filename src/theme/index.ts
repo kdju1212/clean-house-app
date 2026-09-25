@@ -22,6 +22,11 @@ export const colors = {
   info: "#1d4ed8",
   infoBg: "#dbeafe",
   star: "#f59e0b",
+  // Danggeun-style orange accent (tags, badges, active highlights) and the
+  // borderless gray fill its category pills/search bar use.
+  accent: "#ff6f0f",
+  accentBg: "#fff1e7",
+  pillBg: "#f2f3f6",
   kakao: "#FEE500",
   onKakao: "#191919",
 } as const;

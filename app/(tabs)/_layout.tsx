@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Text } from "react-native";
 // This Expo Router version (SDK 57) no longer re-exports Tabs from the
 // package root — it must come from the "expo-router/tabs" subpath (see
 // node_modules/expo-router/index.d.ts, which only re-exports router/Stack/
@@ -8,13 +7,14 @@ import { Tabs } from "expo-router/tabs";
 import { usePathname } from "expo-router";
 import { getStoredUser } from "../../src/storage/auth-storage";
 import { fetchNotifications } from "../../src/api/notifications";
+import { Icon, type IconName } from "../../src/components/Icon";
 import { colors, fontSize, fontWeight } from "../../src/theme";
 
-const ICONS: Record<string, string> = {
-  categories: "🏠",
-  chats: "💬",
-  reservations: "📋",
-  mypage: "👤",
+const ICONS: Record<string, IconName> = {
+  categories: "tabHome",
+  chats: "tabChat",
+  reservations: "tabCalendar",
+  mypage: "tabPerson",
 };
 
 /**
@@ -49,12 +49,11 @@ export default function TabsLayout() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textFaint,
-        tabBarStyle: { borderTopColor: colors.border },
+        tabBarInactiveTintColor: "#b0b3ba",
+        tabBarStyle: { borderTopColor: colors.borderLight },
         tabBarLabelStyle: { fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-        tabBarIcon: ({ color }) => (
-          <Text style={{ fontSize: 20, color }}>{ICONS[route.name]}</Text>
-        ),
+        tabBarBadgeStyle: { backgroundColor: colors.accent, fontSize: 10, fontWeight: fontWeight.bold },
+        tabBarIcon: ({ color }) => <Icon name={ICONS[route.name]} size={25} color={color} />,
       })}
     >
       <Tabs.Screen name="categories" options={{ title: "홈" }} />

@@ -1,14 +1,12 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
-import { Badge } from "./Badge";
-import { colors, fontSize, fontWeight, radius, spacing } from "../theme";
+import { Icon } from "./Icon";
+import { colors, fontSize, fontWeight, spacing } from "../theme";
 import type { CompanyRow } from "../api/companies";
 
-/** Shared by the categories screen's "전체" tab and each category's own
- * list — same card, since a customer browsing either sees the same kind
- * of row (see src/components/company-list-card.tsx on the web repo). Flat,
- * divider-separated row (no per-item border/box) — the list itself draws
- * the dividers between rows, this component just renders one row's content. */
+/** Shared by every category's list on the 홈 tab — one flat, Danggeun-style
+ * row (see src/components/company-list-card.tsx on the web repo for the
+ * same layout). The row draws its own bottom divider. */
 export function CompanyListItem({
   company,
   isAd,
@@ -21,12 +19,20 @@ export function CompanyListItem({
   unitLabel?: string;
   /** Which category this row was listed under — carried into the detail
    * screen so it opens already showing that category's own 소개/사진
-   * instead of the company's general ones. Omitted on the "전체" tab. */
+   * instead of the company's general ones. */
   categoryId?: string;
 }) {
+  const meta = [
+    isAd ? "광고" : null,
+    company.regionNames.join(", ") || null,
+    company.reviewCount > 0 ? `★ ${company.rating.toFixed(1)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <Pressable
-      style={styles.card}
+      style={styles.row}
       onPress={() =>
         router.push({
           pathname: "/companies/[id]",
@@ -41,32 +47,47 @@ export function CompanyListItem({
           <Text style={styles.thumbPlaceholderEmoji}>🧽</Text>
         </View>
       )}
-      <View style={styles.cardBody}>
-        <View style={styles.cardHeader}>
-          {isAd && <Badge label="광고" tone="warning" />}
-          <Text style={styles.cardName} numberOfLines={1}>
-            {company.name}
-          </Text>
-          {company.isVerified ? (
-            <Badge label="인증" tone="info" />
-          ) : (
-            company.hasBusinessRegistration && <Badge label="사업자등록" tone="neutral" />
-          )}
-        </View>
-        <Text style={styles.cardMeta} numberOfLines={1}>
-          {company.regionNames.join(", ")}
-          {company.reviewCount > 0 && ` · ★ ${company.rating.toFixed(1)} (${company.reviewCount})`}
+
+      <View style={styles.body}>
+        <Text style={styles.name} numberOfLines={2}>
+          {company.name}
         </Text>
-        <Text style={styles.cardPrice}>
+        {meta.length > 0 && (
+          <Text style={styles.meta} numberOfLines={1}>
+            {meta}
+          </Text>
+        )}
+        <Text style={styles.price}>
           {company.estimatedPrice != null
             ? `예상 ${company.estimatedPrice.toLocaleString()}원`
             : company.pricingUnit === "PER_UNIT"
               ? `${unitLabel}당 ${company.price.toLocaleString()}원~`
               : `${company.price.toLocaleString()}원~`}
         </Text>
-        {!company.isAvailable && (
-          <View style={styles.unavailableTag}>
-            <Text style={styles.unavailableTagText}>예약 마감</Text>
+
+        <View style={styles.tags}>
+          {company.isVerified ? (
+            <View style={[styles.tag, styles.tagAccent]}>
+              <Text style={[styles.tagText, styles.tagTextAccent]}>✓ 인증업체</Text>
+            </View>
+          ) : (
+            company.hasBusinessRegistration && (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>사업자등록</Text>
+              </View>
+            )
+          )}
+          {!company.isAvailable && (
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>예약마감</Text>
+            </View>
+          )}
+        </View>
+
+        {company.reviewCount > 0 && (
+          <View style={styles.counts}>
+            <Icon name="chatSmall" size={15} color="#b0b3ba" />
+            <Text style={styles.countText}>{company.reviewCount}</Text>
           </View>
         )}
       </View>
@@ -74,29 +95,49 @@ export function CompanyListItem({
   );
 }
 
+const THUMB = 110;
+
 const styles = StyleSheet.create({
-  card: {
+  row: {
     flexDirection: "row",
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    gap: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  thumb: { width: 96, height: 96, borderRadius: radius.lg },
-  thumbPlaceholder: { backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" },
-  thumbPlaceholderEmoji: { fontSize: 28 },
-  cardBody: { flex: 1, justifyContent: "center", gap: 2 },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm - 2 },
-  cardName: { flexShrink: 1, fontSize: fontSize.lg, fontWeight: fontWeight.medium, color: colors.text },
-  cardMeta: { fontSize: fontSize.sm, color: colors.textMuted },
-  cardPrice: { marginTop: 2, fontSize: fontSize.xl - 2, fontWeight: fontWeight.bold, color: colors.text },
-  unavailableTag: {
-    alignSelf: "flex-start",
-    marginTop: spacing.xs,
-    borderRadius: radius.sm,
+  thumb: {
+    width: THUMB,
+    height: THUMB,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.08)",
+  },
+  thumbPlaceholder: {
     backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.sm - 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbPlaceholderEmoji: { fontSize: 32 },
+  body: { flex: 1, minHeight: THUMB },
+  name: { fontSize: 16, lineHeight: 22, color: colors.text },
+  meta: { marginTop: 3, fontSize: fontSize.base, color: "#868b94" },
+  price: { marginTop: 4, fontSize: 16, fontWeight: fontWeight.bold, color: colors.text },
+  tags: { marginTop: 6, flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  tag: {
+    borderRadius: 4,
+    backgroundColor: colors.pillBg,
+    paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  unavailableTagText: { fontSize: fontSize.xs, color: colors.textMuted },
+  tagAccent: { backgroundColor: colors.accentBg },
+  tagText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: "#4d5159" },
+  tagTextAccent: { color: colors.accent },
+  counts: {
+    marginTop: "auto",
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  countText: { fontSize: fontSize.base, color: "#868b94" },
 });

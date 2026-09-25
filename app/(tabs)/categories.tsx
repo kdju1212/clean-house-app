@@ -13,7 +13,7 @@ import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchCompanies, type CompanyRow } from "../../src/api/companies";
 import { fetchCategoryProfile, fetchAllCategoryProfiles } from "../../src/api/category-profile";
 import { getSelectedRegion, type StoredRegion } from "../../src/storage/auth-storage";
-import { logout } from "../../src/api/auth";
+import { fetchNotifications } from "../../src/api/notifications";
 import { getPricingQuantityKey, PRICING_UNIT_LABEL } from "../../src/utils/reservation-questions";
 import { Screen } from "../../src/components/Screen";
 import { LoadingView } from "../../src/components/LoadingView";
@@ -21,6 +21,7 @@ import { EmptyState } from "../../src/components/EmptyState";
 import { CategoryNavBar } from "../../src/components/CategoryNavBar";
 import { CategoryProfileButton } from "../../src/components/CategoryProfileButton";
 import { CompanyListItem } from "../../src/components/CompanyListItem";
+import { Icon } from "../../src/components/Icon";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
 type Row = CompanyRow & { isAd?: boolean };
@@ -37,6 +38,10 @@ export default function CategoriesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [queryInput, setQueryInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  // Search lives behind the header's 🔍 icon, Danggeun-style, instead of
+  // an always-visible input — it stays open while there's a query.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const requestIdRef = useRef(0);
 
   // Same 250ms debounce as the region search on the company profile
@@ -111,6 +116,14 @@ export default function CategoriesScreen() {
 
   useFocusEffect(loadAllProfiles);
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications()
+        .then((list) => setHasUnread(list.some((n) => !n.isRead)))
+        .catch(() => {});
+    }, [])
+  );
+
   useEffect(() => {
     if (!region || !activeSlug) return;
     // Deliberately doesn't clear rows first — keeping the previous tab's
@@ -119,11 +132,6 @@ export default function CategoriesScreen() {
     // switching feel instant instead of a reload.
     loadRows(region.id, activeSlug, debouncedQuery);
   }, [region, activeSlug, debouncedQuery, loadRows]);
-
-  async function handleLogout() {
-    await logout();
-    router.replace("/login");
-  }
 
   async function handleRefresh() {
     if (!region || !activeSlug) return;
@@ -145,34 +153,60 @@ export default function CategoriesScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>어떤 청소가 필요하세요?</Text>
-          <Pressable onPress={() => router.push("/region-select")}>
-            <Text style={styles.regionLink}>{region.name} · 지역 변경</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={() => router.push("/region-select")}
+          style={styles.regionButton}
+          hitSlop={8}
+        >
+          <Icon name="pin" size={22} color={colors.text} />
+          <Text style={styles.regionName} numberOfLines={1}>
+            {region.name.split(" ").pop()}
+          </Text>
+          <Icon name="chevronDown" size={18} color={colors.text} />
+        </Pressable>
         <View style={styles.headerActions}>
-          <Pressable onPress={handleLogout}>
-            <Text style={styles.logout}>로그아웃</Text>
+          <Pressable
+            onPress={() => {
+              if (searchOpen && !queryInput) setSearchOpen(false);
+              else setSearchOpen(true);
+            }}
+            hitSlop={8}
+          >
+            <Icon name="search" size={26} color={colors.text} />
+          </Pressable>
+          <Pressable onPress={() => router.push("/notifications")} hitSlop={8}>
+            <Icon name="bell" size={26} color={colors.text} />
+            {hasUnread && <View style={styles.unreadDot} />}
           </Pressable>
         </View>
       </View>
+
+      {(searchOpen || queryInput.length > 0) && (
+        <View style={styles.searchBar}>
+          <Icon name="search" size={18} color="#868b94" />
+          <TextInput
+            value={queryInput}
+            onChangeText={setQueryInput}
+            placeholder={activeCategoryName ? `${activeCategoryName} 업체 검색` : "업체 이름으로 검색"}
+            placeholderTextColor="#868b94"
+            style={styles.searchInput}
+            autoFocus
+            returnKeyType="search"
+          />
+          {queryInput.length > 0 && (
+            <Pressable onPress={() => setQueryInput("")} hitSlop={8}>
+              <Text style={styles.searchClear}>×</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <View style={styles.navBar}>
         <CategoryNavBar categories={categories} activeSlug={activeSlug} onSelect={setActiveSlug} />
       </View>
 
-      <TextInput
-        value={queryInput}
-        onChangeText={setQueryInput}
-        placeholder="업체 이름으로 검색"
-        placeholderTextColor={colors.textFaint}
-        style={styles.searchInput}
-      />
-
       {activeSlug && (
         <View style={styles.categoryRow}>
-          <Text style={styles.categoryTitle}>{activeCategoryName}</Text>
           <CategoryProfileButton
             categorySlug={activeSlug}
             initialAnswers={categoryProfile}
@@ -215,34 +249,44 @@ export default function CategoriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
-  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
-  categoryRow: {
-    marginTop: spacing.md,
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    minHeight: 40,
   },
-  categoryTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
-  regionLink: {
-    marginTop: spacing.xs + 2,
-    fontSize: fontSize.base,
-    color: "#525252",
-    textDecorationLine: "underline",
+  regionButton: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
+  regionName: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text, flexShrink: 1 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.xl },
+  unreadDot: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.accent,
+    borderWidth: 1.5,
+    borderColor: colors.bg,
   },
-  headerActions: { alignItems: "flex-end", gap: spacing.sm },
-  logout: { fontSize: fontSize.sm, color: colors.textFaint },
-  navBar: { marginTop: spacing.lg },
-  searchInput: {
+  searchBar: {
     marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.pill,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.pillBg,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: fontSize.base,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.sm + 2,
+    fontSize: fontSize.md,
     color: colors.text,
   },
-  list: { marginTop: spacing.md },
+  searchClear: { fontSize: 20, color: "#868b94", lineHeight: 22 },
+  navBar: { marginTop: spacing.lg },
+  categoryRow: { marginTop: spacing.sm, alignItems: "flex-end" },
+  list: { marginTop: spacing.xs },
   inlineLoading: { marginTop: spacing.xxl },
 });

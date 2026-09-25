@@ -99,13 +99,12 @@ function Pill({
 const styles = StyleSheet.create({
   container: { flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.xs },
   pill: {
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.pillBg,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm - 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 1,
   },
-  pillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  pillText: { fontSize: fontSize.base, fontWeight: fontWeight.medium, color: colors.text },
-  pillTextActive: { color: colors.onPrimary },
+  pillActive: { backgroundColor: colors.primary },
+  pillText: { fontSize: fontSize.lg, fontWeight: fontWeight.medium, color: colors.text },
+  pillTextActive: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
 });
