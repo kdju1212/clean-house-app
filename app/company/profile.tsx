@@ -65,7 +65,6 @@ export default function CompanyProfileScreen() {
   }
 
   const workPhotos = data.photos.filter((p) => p.type === "WORK");
-  const beforeAfterPhotos = data.photos.filter((p) => p.type === "BEFORE_AFTER");
 
   return (
     <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
@@ -89,16 +88,8 @@ export default function CompanyProfileScreen() {
       <ServicesSection services={data.services} categories={categories} onChanged={load} />
 
       <PhotoStackSection
-        title="작업 사진"
-        type="WORK"
+        title="상세페이지"
         photos={workPhotos}
-        services={data.services}
-        onChanged={load}
-      />
-      <PhotoStackSection
-        title="전/후 비교"
-        type="BEFORE_AFTER"
-        photos={beforeAfterPhotos}
         services={data.services}
         onChanged={load}
       />
@@ -417,13 +408,11 @@ function ServicesSection({
 
 function PhotoStackSection({
   title,
-  type,
   photos,
   services,
   onChanged,
 }: {
   title: string;
-  type: "WORK" | "BEFORE_AFTER";
   photos: CompanyPhoto[];
   // Offered as "이 사진, 어떤 카테고리 사진인가요?" tag choices — only one
   // registered service means there's nothing to distinguish, so the
@@ -431,8 +420,10 @@ function PhotoStackSection({
   services: CompanyMe["services"];
   onChanged: () => void;
 }) {
-  const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(null);
-  const { uploading, error, pick } = useCompanyPhotoUpload(type, uploadCategoryId, onChanged);
+  const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(
+    services[0]?.categoryId ?? null
+  );
+  const { uploading, error, pick } = useCompanyPhotoUpload("WORK", uploadCategoryId, onChanged);
   const categoryName = (id: string | null) =>
     id ? services.find((s) => s.categoryId === id)?.categoryName ?? "" : "전체 공통";
 
@@ -440,14 +431,6 @@ function PhotoStackSection({
     <View style={styles.photoStackSection}>
       {services.length > 1 && (
         <View style={styles.chipRow}>
-          <Pressable
-            style={[styles.chip, uploadCategoryId === null && styles.chipActive]}
-            onPress={() => setUploadCategoryId(null)}
-          >
-            <Text style={[styles.chipText, uploadCategoryId === null && styles.chipTextActive]}>
-              전체 공통
-            </Text>
-          </Pressable>
           {services.map((s) => (
             <Pressable
               key={s.categoryId}

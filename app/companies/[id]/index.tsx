@@ -241,8 +241,7 @@ export default function CompanyDetailScreen() {
   const matchesSelected = (photo: CompanyDetail["photos"][number]) =>
     photo.categoryId === null || photo.categoryId === selectedService?.categoryId;
   const workPhotos = photos.filter((p) => p.type === "WORK" && matchesSelected(p));
-  const beforeAfterPhotos = photos.filter((p) => p.type === "BEFORE_AFTER" && matchesSelected(p));
-  const hasDetailPhotos = workPhotos.length > 0 || beforeAfterPhotos.length > 0;
+  const hasDetailPhotos = workPhotos.length > 0;
   const reviewPhotos = reviews.flatMap((r) =>
     r.photoUrls.map((url) => ({ key: `${r.id}-${url}`, url }))
   );
@@ -384,8 +383,7 @@ export default function CompanyDetailScreen() {
           <View onLayout={(e) => setDetailY(e.nativeEvent.layout.y)}>
             <View style={styles.separator} />
             <View style={styles.photoSection}>
-              <PhotoStack title="작업 사진" photos={workPhotos} />
-              <PhotoStack title="전/후 비교" photos={beforeAfterPhotos} />
+              <PhotoStack title="상세페이지" photos={workPhotos} />
             </View>
           </View>
         )}
