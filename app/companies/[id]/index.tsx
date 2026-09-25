@@ -131,8 +131,6 @@ export default function CompanyDetailScreen() {
         id,
         name: data.company.name,
         categoryId: service.categoryId,
-        categorySlug: service.categorySlug,
-        price: String(service.price),
       },
     });
   }

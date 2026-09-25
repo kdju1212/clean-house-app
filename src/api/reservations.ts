@@ -24,7 +24,8 @@ export async function fetchMyReservations(): Promise<MyReservation[]> {
 export type CreateReservationInput = {
   regionId: string;
   companyId: string;
-  categoryId: string;
+  // One per service booked on this visit (e.g. 입주청소 + 에어컨청소).
+  items: { categoryId: string; categoryAnswers?: Record<string, string> }[];
   name: string;
   phone: string;
   address: string;
@@ -32,7 +33,6 @@ export type CreateReservationInput = {
   desiredDate: string; // YYYY-MM-DD
   desiredTime: string; // one of TIME_SLOTS, e.g. "09:00"
   requestNote?: string;
-  categoryAnswers?: Record<string, string>;
 };
 
 /**

@@ -165,8 +165,13 @@ export async function fetchCompanyReservations(status?: string): Promise<Company
 
 export type CompanyReservationDetail = CompanyReservation & {
   requestNote: string | null;
-  categorySlug: string;
-  categoryAnswers: Record<string, string> | null;
+  // One per service booked on this visit.
+  items: {
+    categoryName: string;
+    categorySlug: string;
+    categoryAnswers: Record<string, string> | null;
+    price: number | null;
+  }[];
 };
 
 export async function fetchCompanyReservationDetail(

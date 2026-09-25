@@ -89,15 +89,24 @@ export default function CompanyReservationDetailScreen() {
           label="주소"
           value={`${reservation.address}${reservation.addressDetail ? ` ${reservation.addressDetail}` : ""}`}
         />
-        {reservation.categoryAnswers && (
+        {reservation.items.some((item) => item.categoryAnswers) && (
           <View style={styles.noteBlock}>
             <Text style={styles.rowLabel}>견적 정보</Text>
-            {getReservationQuestions(reservation.categorySlug).map((q) => {
-              const value = reservation.categoryAnswers?.[q.key];
-              return value ? (
-                <Row key={q.key} label={q.label} value={value.split(",").join(", ")} />
-              ) : null;
-            })}
+            {reservation.items.map((item) =>
+              item.categoryAnswers ? (
+                <View key={item.categorySlug}>
+                  {reservation.items.length > 1 && (
+                    <Text style={styles.itemTitle}>{item.categoryName}</Text>
+                  )}
+                  {getReservationQuestions(item.categorySlug).map((q) => {
+                    const value = item.categoryAnswers?.[q.key];
+                    return value ? (
+                      <Row key={q.key} label={q.label} value={value.split(",").join(", ")} />
+                    ) : null;
+                  })}
+                </View>
+              ) : null
+            )}
           </View>
         )}
         {reservation.requestNote && (
@@ -178,6 +187,7 @@ const styles = StyleSheet.create({
   rowValue: { fontSize: fontSize.base, fontWeight: fontWeight.medium, textAlign: "right", flexShrink: 1, color: colors.text },
   noteBlock: { borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: spacing.sm + 2, gap: spacing.xs },
   noteText: { fontSize: fontSize.base, color: colors.text },
+  itemTitle: { marginTop: spacing.xs, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text },
   hint: { marginTop: spacing.lg, fontSize: fontSize.sm, color: colors.textMuted },
   priceInput: {
     marginTop: spacing.sm,
