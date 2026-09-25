@@ -6,7 +6,9 @@ import type { CompanyRow } from "../api/companies";
 
 /** Shared by the categories screen's "전체" tab and each category's own
  * list — same card, since a customer browsing either sees the same kind
- * of row (see src/components/company-list-card.tsx on the web repo). */
+ * of row (see src/components/company-list-card.tsx on the web repo). Flat,
+ * divider-separated row (no per-item border/box) — the list itself draws
+ * the dividers between rows, this component just renders one row's content. */
 export function CompanyListItem({
   company,
   isAd,
@@ -35,31 +37,38 @@ export function CompanyListItem({
       {company.mainImageUrl ? (
         <Image source={{ uri: company.mainImageUrl }} style={styles.thumb} />
       ) : (
-        <View style={[styles.thumb, styles.thumbPlaceholder]} />
+        <View style={[styles.thumb, styles.thumbPlaceholder]}>
+          <Text style={styles.thumbPlaceholderEmoji}>🧽</Text>
+        </View>
       )}
       <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardName}>{company.name}</Text>
+          {isAd && <Badge label="광고" tone="warning" />}
+          <Text style={styles.cardName} numberOfLines={1}>
+            {company.name}
+          </Text>
           {company.isVerified ? (
             <Badge label="인증" tone="info" />
           ) : (
             company.hasBusinessRegistration && <Badge label="사업자등록" tone="neutral" />
           )}
-          {isAd && <Badge label="광고" tone="warning" />}
         </View>
-        <Text style={styles.cardIntro} numberOfLines={1}>
-          {company.introText ?? ""}
+        <Text style={styles.cardMeta} numberOfLines={1}>
+          {company.regionNames.join(", ")}
+          {company.reviewCount > 0 && ` · ★ ${company.rating.toFixed(1)} (${company.reviewCount})`}
         </Text>
-        <Text style={styles.cardMeta}>
+        <Text style={styles.cardPrice}>
           {company.estimatedPrice != null
             ? `예상 ${company.estimatedPrice.toLocaleString()}원`
             : company.pricingUnit === "PER_UNIT"
               ? `${unitLabel}당 ${company.price.toLocaleString()}원~`
               : `${company.price.toLocaleString()}원~`}
-          {company.reviewCount > 0
-            ? ` · ★ ${company.rating.toFixed(1)} (${company.reviewCount})`
-            : " · 리뷰 없음"}
         </Text>
+        {!company.isAvailable && (
+          <View style={styles.unavailableTag}>
+            <Text style={styles.unavailableTagText}>예약 마감</Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -69,17 +78,25 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     gap: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.sm + 2,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  thumb: { width: 64, height: 64, borderRadius: radius.md },
-  thumbPlaceholder: { backgroundColor: colors.surfaceMuted },
-  cardBody: { flex: 1, justifyContent: "center" },
+  thumb: { width: 96, height: 96, borderRadius: radius.lg },
+  thumbPlaceholder: { backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" },
+  thumbPlaceholderEmoji: { fontSize: 28 },
+  cardBody: { flex: 1, justifyContent: "center", gap: 2 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm - 2 },
-  cardName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
-  cardIntro: { marginTop: 2, fontSize: fontSize.sm, color: colors.textMuted },
-  cardMeta: { marginTop: spacing.xs, fontSize: fontSize.sm, color: "#525252" },
+  cardName: { flexShrink: 1, fontSize: fontSize.lg, fontWeight: fontWeight.medium, color: colors.text },
+  cardMeta: { fontSize: fontSize.sm, color: colors.textMuted },
+  cardPrice: { marginTop: 2, fontSize: fontSize.xl - 2, fontWeight: fontWeight.bold, color: colors.text },
+  unavailableTag: {
+    alignSelf: "flex-start",
+    marginTop: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceMuted,
+    paddingHorizontal: spacing.sm - 2,
+    paddingVertical: 2,
+  },
+  unavailableTagText: { fontSize: fontSize.xs, color: colors.textMuted },
 });
