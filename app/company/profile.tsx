@@ -13,6 +13,7 @@ import {
   deleteCompanyPhoto,
   updateCompanyPhotoCaption,
   updateDetailPageMode,
+  setCustomTimeSlots,
   type CompanyMe,
   type CompanyPhoto,
   type DetailPageMode,
@@ -888,6 +889,75 @@ function BusinessHoursPicker({
   );
 }
 
+// 06시~23시 — a cleaning visit before 6am or after 11pm isn't realistic.
+const CUSTOM_HOUR_OPTIONS = Array.from({ length: 18 }, (_, i) => i + 6);
+
+/** "특정 시간만 예약 받기" — hand-pick exactly which hours are bookable
+ * (e.g. [10, 15] for "10시, 15시만"), instead of a continuous range. Empty
+ * selection means "not customized": bookable times fall back to being
+ * generated from 영업시간/예약 텀 (see the web repo's schedule settings).
+ * Saves immediately on each tap, same as BusinessHoursPicker's web sibling
+ * — independent of this screen's "저장" button. */
+function CustomTimeSlotsPicker({ initial }: { initial: number[] }) {
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(next: number[]) {
+    const previous = value;
+    setValue(next);
+    setSaving(true);
+    setError(null);
+    try {
+      await setCustomTimeSlots(next);
+    } catch (err) {
+      setValue(previous);
+      setError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggle(hour: number) {
+    save(value.includes(hour) ? value.filter((h) => h !== hour) : [...value, hour].sort((a, b) => a - b));
+  }
+
+  return (
+    <View>
+      <View style={styles.hoursChipGrid}>
+        {CUSTOM_HOUR_OPTIONS.map((hour) => {
+          const active = value.includes(hour);
+          return (
+            <Pressable
+              key={hour}
+              onPress={() => toggle(hour)}
+              disabled={saving}
+              style={[styles.hoursChip, active && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                {String(hour).padStart(2, "0")}시
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        {value.length > 0
+          ? `선택한 ${value.length}개 시간만 고객에게 보여요. 영업시간 설정은 무시돼요.`
+          : "아무것도 선택하지 않으면 영업시간과 예약 텀으로 자동 계산돼요."}
+      </Text>
+      {value.length > 0 && (
+        <Pressable onPress={() => save([])} disabled={saving}>
+          <Text style={[styles.helperText, styles.resetLink]}>
+            전체 해제하고 자동 계산으로 되돌리기
+          </Text>
+        </Pressable>
+      )}
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+}
+
 export type InfoSectionHandle = { save: () => Promise<boolean> };
 
 const InfoSection = forwardRef<
@@ -957,6 +1027,9 @@ const InfoSection = forwardRef<
 
       <Text style={[styles.infoLabel, styles.hoursLabel]}>영업시간</Text>
       <BusinessHoursPicker value={businessHours} onChange={setBusinessHours} />
+
+      <Text style={[styles.infoLabel, styles.hoursLabel]}>특정 시간만 예약 받기</Text>
+      <CustomTimeSlotsPicker initial={company.customTimeSlots} />
 
       <TextField
         label="홈페이지 주소 (선택)"
@@ -1174,6 +1247,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   hoursLabel: { marginTop: spacing.md + 2 },
+  resetLink: { marginTop: spacing.xs, textDecorationLine: "underline", color: colors.textMuted },
   hoursRow: {
     marginTop: spacing.xs + 2,
     flexDirection: "row",

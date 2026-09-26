@@ -40,6 +40,10 @@ export type CompanyMe = {
     mainImageUrl: string | null;
     websiteUrl: string | null;
     detailPageMode: DetailPageMode;
+    // Hand-picked bookable hours (0–23) — see "특정 시간만 예약 받기".
+    // Empty means "not customized": bookable times are generated from
+    // businessHours/예약 텀 instead (see clean_house's generateTimeSlots).
+    customTimeSlots: number[];
   };
   requestedCount: number;
   averageRating: number;
@@ -53,6 +57,13 @@ export type CompanyMe = {
 
 export async function fetchCompanyMe(): Promise<CompanyMe> {
   return apiFetch<CompanyMe>("/api/mobile/company/me");
+}
+
+export async function setCustomTimeSlots(hours: number[]): Promise<void> {
+  await apiFetch("/api/mobile/company/custom-time-slots", {
+    method: "PATCH",
+    body: { customTimeSlots: hours },
+  });
 }
 
 /** Registers the caller's account as a company — see clean_house's
