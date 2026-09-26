@@ -119,6 +119,17 @@ export async function fetchCompanyDetail(id: string): Promise<CompanyDetail> {
   return apiFetch<CompanyDetail>(`/api/mobile/companies/${id}`);
 }
 
+/** Which TIME_SLOTS are already taken on `dateStr` — expanded by the
+ * company's own 예약 텀, so the picker can gray them out before the
+ * customer even tries. createReservation re-checks this server-side
+ * regardless. */
+export async function fetchBlockedTimes(companyId: string, dateStr: string): Promise<string[]> {
+  const { times } = await apiFetch<{ times: string[] }>(
+    `/api/mobile/companies/${companyId}/blocked-times?date=${dateStr}`
+  );
+  return times;
+}
+
 export async function toggleCompanyFavorite(id: string): Promise<{ isFavorited: boolean }> {
   return apiFetch<{ isFavorited: boolean }>(`/api/mobile/companies/${id}/favorite`, {
     method: "POST",

@@ -5,7 +5,11 @@ import * as Location from "expo-location";
 import { createReservation } from "../../../src/api/reservations";
 import { fetchAddressByCoords } from "../../../src/api/address";
 import { fetchCategoryProfile } from "../../../src/api/category-profile";
-import { fetchCompanyDetail, type CompanyDetailService } from "../../../src/api/companies";
+import {
+  fetchBlockedTimes,
+  fetchCompanyDetail,
+  type CompanyDetailService,
+} from "../../../src/api/companies";
 import { CalendarDatePicker, todayDateStr } from "../../../src/components/CalendarDatePicker";
 import { getSelectedRegion, getStoredUser, updateStoredPhone } from "../../../src/storage/auth-storage";
 import {
@@ -58,6 +62,12 @@ export default function ReserveScreen() {
   const [locateError, setLocateError] = useState<string | null>(null);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const isDesiredDateBlocked = blockedDates.includes(desiredDate);
+  const [fetchedBlockedTimes, setFetchedBlockedTimes] = useState<string[]>([]);
+  const blockedTimes = isDesiredDateBlocked ? [] : fetchedBlockedTimes;
+  // desiredTime is the customer's last explicit pick — reconciled against
+  // blockedTimes here rather than reset from an effect, so a date/fetch
+  // change never leaves a stale, now-taken slot looking selected.
+  const effectiveDesiredTime = desiredTime && blockedTimes.includes(desiredTime) ? null : desiredTime;
 
   useEffect(() => {
     // Web pre-fills name/phone from the account (Kakao profile name, phone
@@ -85,6 +95,25 @@ export default function ReserveScreen() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  // Which times are already booked changes per date, so it's re-fetched
+  // whenever the customer picks a different day.
+  useEffect(() => {
+    if (!params.id || !desiredDate || isDesiredDateBlocked) return;
+    let cancelled = false;
+    fetchBlockedTimes(params.id, desiredDate)
+      .then((times) => {
+        if (!cancelled) setFetchedBlockedTimes(times);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedBlockedTimes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id, desiredDate, isDesiredDateBlocked]);
+
+  const allTimesBlocked = blockedTimes.length >= TIME_SLOTS.length;
 
   // Pre-fills 평수/브랜드/형태/대수 etc. from whatever the customer saved via
   // the categories screen's "정보입력" button, so they don't have to retype
@@ -139,7 +168,7 @@ export default function ReserveScreen() {
   }
 
   async function handleSubmit() {
-    if (!desiredTime) {
+    if (!effectiveDesiredTime) {
       Alert.alert("알림", "희망 시간을 선택해주세요.");
       return;
     }
@@ -186,7 +215,7 @@ export default function ReserveScreen() {
         address,
         addressDetail: addressDetail || undefined,
         desiredDate,
-        desiredTime,
+        desiredTime: effectiveDesiredTime,
         requestNote: requestNote || undefined,
       });
 
@@ -281,23 +310,37 @@ export default function ReserveScreen() {
 
       <Text style={styles.label}>희망 시간</Text>
       <View style={styles.timeGrid}>
-        {TIME_SLOTS.map((slot) => (
-          <Pressable
-            key={slot}
-            style={[styles.timeChip, desiredTime === slot && styles.timeChipSelected]}
-            onPress={() => setDesiredTime(slot)}
-          >
-            <Text
+        {TIME_SLOTS.map((slot) => {
+          const blocked = blockedTimes.includes(slot);
+          return (
+            <Pressable
+              key={slot}
+              disabled={blocked}
               style={[
-                styles.timeChipText,
-                desiredTime === slot && styles.timeChipTextSelected,
+                styles.timeChip,
+                effectiveDesiredTime === slot && styles.timeChipSelected,
+                blocked && styles.timeChipBlocked,
               ]}
+              onPress={() => setDesiredTime(slot)}
             >
-              {slot}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[
+                  styles.timeChipText,
+                  effectiveDesiredTime === slot && styles.timeChipTextSelected,
+                  blocked && styles.timeChipTextBlocked,
+                ]}
+              >
+                {slot}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
+      {allTimesBlocked && (
+        <Text style={styles.errorText}>
+          해당 날짜는 예약이 모두 찼어요. 다른 날짜를 선택해주세요.
+        </Text>
+      )}
 
       {selectedServices.map((service) => (
         <ServiceQuestions
@@ -473,8 +516,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm - 2,
   },
   timeChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  timeChipBlocked: { backgroundColor: colors.surfaceMuted, borderColor: colors.surfaceMuted },
   timeChipText: { fontSize: fontSize.base, color: "#404040" },
   timeChipTextSelected: { color: colors.onPrimary },
+  timeChipTextBlocked: { color: colors.textFaint },
   policyHint: { marginTop: spacing.lg, fontSize: fontSize.xs, color: colors.textFaint },
   submitButton: { marginTop: spacing.sm },
 });
