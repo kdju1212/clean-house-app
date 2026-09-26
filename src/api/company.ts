@@ -208,3 +208,16 @@ export async function transitionReservation(
     body: { action, price },
   });
 }
+
+/** Upcoming 휴무일 ("YYYY-MM-DD") plus today's date in Korea per the server,
+ * so the calendar agrees with the server's "no past dates" rule. */
+export async function fetchBlockedDates(): Promise<{ dates: string[]; today: string }> {
+  return apiFetch<{ dates: string[]; today: string }>("/api/mobile/company/blocked-dates");
+}
+
+export async function setBlockedDate(date: string, blocked: boolean): Promise<void> {
+  await apiFetch("/api/mobile/company/blocked-dates", {
+    method: blocked ? "POST" : "DELETE",
+    body: { date },
+  });
+}

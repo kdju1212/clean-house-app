@@ -2,7 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import { Dimensions, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import {
+  fetchBlockedDates,
   fetchCompanyReservations,
+  setBlockedDate,
   transitionReservation,
   type CompanyReservation,
 } from "../../../src/api/company";
@@ -46,15 +48,32 @@ function dateKey(isoString: string): string {
   return isoString.slice(0, 10);
 }
 
+/** Today as "YYYY-MM-DD" in the device's own timezone — toISOString() would
+ * give the UTC date, which in Korea is still yesterday until 09:00. */
+function localTodayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function CompanyReservationsScreen() {
   const [activeStatus, setActiveStatus] = useState<string>("");
   const [view, setView] = useState<"list" | "calendar">("list");
   const [reservations, setReservations] = useState<CompanyReservation[] | null>(null);
+  const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+  const [serverToday, setServerToday] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(() => {
-    return fetchCompanyReservations(activeStatus || undefined).then(setReservations);
+    return Promise.all([
+      fetchCompanyReservations(activeStatus || undefined).then(setReservations),
+      fetchBlockedDates()
+        .then(({ dates, today }) => {
+          setBlockedDates(new Set(dates));
+          setServerToday(today);
+        })
+        .catch(() => {}),
+    ]);
   }, [activeStatus]);
 
   useFocusEffect(
@@ -151,6 +170,9 @@ export default function CompanyReservationsScreen() {
           reservations={reservations ?? []}
           busyId={busyId}
           onAction={handleAction}
+          blockedDates={blockedDates}
+          onBlockedDatesChange={setBlockedDates}
+          todayKey={serverToday ?? localTodayKey()}
         />
       )}
     </Screen>
@@ -222,17 +244,41 @@ function ReservationCalendar({
   reservations,
   busyId,
   onAction,
+  blockedDates,
+  onBlockedDatesChange,
+  todayKey,
 }: {
   reservations: CompanyReservation[];
   busyId: string | null;
   onAction: (id: string, action: "accept" | "reject" | "complete" | "no_show") => void;
+  blockedDates: Set<string>;
+  onBlockedDatesChange: (next: Set<string>) => void;
+  todayKey: string;
 }) {
-  const todayKey = useMemo(() => dateKey(new Date().toISOString()), []);
-  const [monthCursor, setMonthCursor] = useState(() => {
-    const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth() };
-  });
+  const [monthCursor, setMonthCursor] = useState(() => ({
+    year: Number(todayKey.slice(0, 4)),
+    month: Number(todayKey.slice(5, 7)) - 1,
+  }));
   const [selectedDate, setSelectedDate] = useState(todayKey);
+  const [blockPending, setBlockPending] = useState(false);
+  const [blockError, setBlockError] = useState<string | null>(null);
+
+  async function toggleBlocked(date: string) {
+    const next = !blockedDates.has(date);
+    setBlockPending(true);
+    setBlockError(null);
+    try {
+      await setBlockedDate(date, next);
+      const copy = new Set(blockedDates);
+      if (next) copy.add(date);
+      else copy.delete(date);
+      onBlockedDatesChange(copy);
+    } catch (err) {
+      setBlockError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    } finally {
+      setBlockPending(false);
+    }
+  }
 
   const byDate = useMemo(() => {
     const map = new Map<string, CompanyReservation[]>();
@@ -294,26 +340,42 @@ function ReservationCalendar({
           const needsAction = dayReservations.some((r) => r.status === "REQUESTED");
           const isSelected = day === selectedDate;
           const isToday = day === todayKey;
+          const isBlocked = blockedDates.has(day);
           return (
             <Pressable
               key={day}
-              onPress={() => setSelectedDate(day)}
+              onPress={() => {
+                setSelectedDate(day);
+                setBlockError(null);
+              }}
               style={[
                 styles.calendarCell,
                 isSelected && styles.calendarCellSelected,
-                !isSelected && isToday && styles.calendarCellToday,
+                !isSelected && isBlocked && styles.calendarCellBlocked,
+                !isSelected && !isBlocked && isToday && styles.calendarCellToday,
               ]}
             >
               <Text
                 style={[
                   styles.calendarCellText,
                   isSelected && styles.calendarCellTextSelected,
+                  !isSelected && isBlocked && styles.calendarCellTextBlocked,
                   !isSelected && isToday && styles.calendarCellTextToday,
                 ]}
               >
                 {Number(day.slice(-2))}
               </Text>
-              {dayReservations.length > 0 && (
+              {isBlocked && (
+                <Text
+                  style={[
+                    styles.calendarBlockedLabel,
+                    isSelected && styles.calendarCellTextSelected,
+                  ]}
+                >
+                  휴무
+                </Text>
+              )}
+              {!isBlocked && dayReservations.length > 0 && (
                 <View
                   style={[
                     styles.calendarDot,
@@ -326,6 +388,21 @@ function ReservationCalendar({
         })}
       </View>
 
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}>
+          <View style={[styles.calendarDot, { backgroundColor: colors.warning }]} />
+          <Text style={styles.legendText}>신규 예약</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.calendarDot, { backgroundColor: colors.textMuted }]} />
+          <Text style={styles.legendText}>예약</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <Text style={[styles.calendarBlockedLabel, styles.legendBlocked]}>휴무</Text>
+          <Text style={styles.legendText}>휴무일</Text>
+        </View>
+      </View>
+
       <View style={styles.calendarSelectedHeader}>
         <Text style={styles.calendarSelectedLabel}>
           {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("ko-KR", {
@@ -334,8 +411,42 @@ function ReservationCalendar({
             weekday: "short",
           })}
           {selectedReservations.length > 0 ? ` · ${selectedReservations.length}건` : ""}
+          {blockedDates.has(selectedDate) ? (
+            <Text style={styles.calendarBlockedInline}> 휴무일</Text>
+          ) : null}
         </Text>
+        {selectedDate >= todayKey && (
+          <Pressable
+            onPress={() => toggleBlocked(selectedDate)}
+            disabled={blockPending}
+            style={[
+              styles.blockButton,
+              blockedDates.has(selectedDate) ? styles.unblockButton : styles.setBlockButton,
+              blockPending && styles.blockButtonDisabled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.blockButtonText,
+                !blockedDates.has(selectedDate) && styles.setBlockButtonText,
+              ]}
+            >
+              {blockPending
+                ? "저장 중..."
+                : blockedDates.has(selectedDate)
+                  ? "휴무 해제"
+                  : "이 날 휴무로 설정"}
+            </Text>
+          </Pressable>
+        )}
       </View>
+      {blockError && <Text style={styles.blockErrorText}>{blockError}</Text>}
+      {blockedDates.has(selectedDate) &&
+        selectedReservations.some((r) => r.status === "REQUESTED" || r.status === "ACCEPTED") && (
+          <Text style={styles.blockHint}>
+            휴무일이어도 이미 들어온 예약은 그대로 유지돼요. 새 예약만 막혀요.
+          </Text>
+        )}
       {selectedReservations.length === 0 ? (
         <EmptyState text="이 날짜엔 예약이 없어요." />
       ) : (
@@ -414,6 +525,38 @@ const styles = StyleSheet.create({
   calendarCellTextSelected: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
   calendarCellTextToday: { fontWeight: fontWeight.semibold },
   calendarDot: { width: 5, height: 5, borderRadius: 3 },
-  calendarSelectedHeader: { marginTop: spacing.md + 2 },
+  calendarSelectedHeader: {
+    marginTop: spacing.md + 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  calendarCellBlocked: { backgroundColor: colors.dangerBg, borderRadius: radius.md },
+  calendarCellTextBlocked: { color: colors.danger },
+  calendarBlockedLabel: { fontSize: 9, lineHeight: 10, color: colors.danger },
+  calendarBlockedInline: { color: colors.danger },
+  legendRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.sm, alignItems: "center" },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  legendText: { fontSize: fontSize.xs, color: colors.textFaint },
+  legendBlocked: {
+    backgroundColor: colors.dangerBg,
+    paddingHorizontal: 3,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  blockButton: {
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 1,
+  },
+  setBlockButton: { borderColor: colors.dangerBorder },
+  unblockButton: { borderColor: colors.border },
+  blockButtonDisabled: { opacity: 0.5 },
+  blockButtonText: { fontSize: fontSize.xs, fontWeight: fontWeight.medium, color: colors.textMuted },
+  setBlockButtonText: { color: colors.danger },
+  blockErrorText: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.danger },
+  blockHint: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textFaint },
   calendarSelectedLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
 });
