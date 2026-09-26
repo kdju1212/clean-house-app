@@ -65,7 +65,7 @@ export type CompanyDetailService = {
 export type CompanyDetailPhoto = {
   id: string;
   url: string;
-  type: "MAIN" | "WORK" | "BEFORE_AFTER";
+  type: "MAIN" | "WORK" | "BEFORE_AFTER" | "TEMPLATE";
   categoryId: string | null;
   caption: string | null;
 };

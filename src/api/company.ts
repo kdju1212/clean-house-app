@@ -18,12 +18,11 @@ export type CompanyService = {
 export type CompanyPhoto = {
   id: string;
   url: string;
-  type: "MAIN" | "WORK" | "BEFORE_AFTER";
+  type: "MAIN" | "WORK" | "BEFORE_AFTER" | "TEMPLATE";
   // Which category this photo belongs to (WORK/BEFORE_AFTER only) — null
   // means "shown for every category". See clean_house's CompanyPhoto model.
   categoryId: string | null;
-  // Shown under the photo when detailPageMode is SITE_TEMPLATE — ignored
-  // in CUSTOM_IMAGE mode.
+  // Only used by TEMPLATE photos (SITE_TEMPLATE mode's own photo set).
   caption: string | null;
 };
 

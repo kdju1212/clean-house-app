@@ -92,6 +92,7 @@ export default function CompanyProfileScreen() {
   }
 
   const workPhotos = data.photos.filter((p) => p.type === "WORK");
+  const templatePhotos = data.photos.filter((p) => p.type === "TEMPLATE");
 
   return (
     <Screen scroll refreshing={refreshing} onRefresh={handleRefresh}>
@@ -115,7 +116,8 @@ export default function CompanyProfileScreen() {
       <ServicesSection services={data.services} categories={categories} onChanged={load} />
 
       <DetailPageSection
-        photos={workPhotos}
+        workPhotos={workPhotos}
+        templatePhotos={templatePhotos}
         services={data.services}
         detailPageMode={data.company.detailPageMode}
         onChanged={load}
@@ -442,12 +444,14 @@ function ServicesSection({
  * top of whichever editor matches the company's current detailPageMode.
  * Mode switches optimistically, same pattern as the web dashboard. */
 function DetailPageSection({
-  photos,
+  workPhotos,
+  templatePhotos,
   services,
   detailPageMode,
   onChanged,
 }: {
-  photos: CompanyPhoto[];
+  workPhotos: CompanyPhoto[];
+  templatePhotos: CompanyPhoto[];
   services: CompanyMe["services"];
   detailPageMode: DetailPageMode;
   onChanged: () => void;
@@ -487,21 +491,24 @@ function DetailPageSection({
         </Pressable>
       </View>
       {modeError && <Text style={styles.errorText}>{modeError}</Text>}
+      <Text style={styles.modeHint}>
+        두 방식의 사진은 따로 저장되고, 선택한 방식만 고객에게 보여요.
+      </Text>
 
       <PhotoStackSection
-        photos={photos}
+        photos={mode === "SITE_TEMPLATE" ? templatePhotos : workPhotos}
         services={services}
         onChanged={onChanged}
-        showCaptions={mode === "SITE_TEMPLATE"}
+        mode={mode}
       />
     </Section>
   );
 }
 
-/** Which category the *next* uploaded photo gets tagged with — shared by
- * PhotoStackSection. Hidden when there's nothing to distinguish (0 or 1
- * registered service). */
-function CategoryChipPicker({
+/** One tab per registered service — the editor then shows exactly what a
+ * customer sees with that service picked (its own photos plus untagged
+ * "공통" ones), and new uploads are tagged to it. Hidden with 0–1 services. */
+function CategoryTabs({
   value,
   onChange,
   services,
@@ -532,38 +539,38 @@ function PhotoStackSection({
   photos,
   services,
   onChanged,
-  showCaptions = false,
+  mode,
 }: {
   photos: CompanyPhoto[];
-  // Offered as "이 사진, 어떤 카테고리 사진인가요?" tag choices — only one
-  // registered service means there's nothing to distinguish, so the
-  // selector (and each photo's tag badge) stays hidden.
   services: CompanyMe["services"];
   onChanged: () => void;
-  // SITE_TEMPLATE mode only — CUSTOM_IMAGE photos are meant to be
-  // pre-designed banner slices that don't need one, so the input stays
-  // hidden there (see PhotoStack.captionSlot).
-  showCaptions?: boolean;
+  mode: DetailPageMode;
 }) {
-  const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     services[0]?.categoryId ?? null
   );
-  const { uploading, error, pick } = useCompanyPhotoUpload("WORK", uploadCategoryId, onChanged);
-  const categoryName = (id: string | null) =>
-    id ? services.find((s) => s.categoryId === id)?.categoryName ?? "" : "전체 공통";
+  const { uploading, error, pick } = useCompanyPhotoUpload(
+    mode === "SITE_TEMPLATE" ? "TEMPLATE" : "WORK",
+    selectedCategoryId,
+    onChanged
+  );
+  const hasTabs = services.length > 1;
+  const visiblePhotos = hasTabs
+    ? photos.filter((p) => p.categoryId === null || p.categoryId === selectedCategoryId)
+    : photos;
+  const selectedName = services.find((s) => s.categoryId === selectedCategoryId)?.categoryName;
 
   return (
     <View style={styles.photoStackSection}>
-      <CategoryChipPicker value={uploadCategoryId} onChange={setUploadCategoryId} services={services} />
+      <CategoryTabs value={selectedCategoryId} onChange={setSelectedCategoryId} services={services} />
       <PhotoStack
-        photos={photos}
+        photos={visiblePhotos}
+        variant={mode === "SITE_TEMPLATE" ? "template" : "custom"}
         photoOverlay={(photo) => (
           <>
-            {services.length > 1 && (
+            {hasTabs && (photo as CompanyPhoto).categoryId === null && (
               <View style={styles.photoTag}>
-                <Text style={styles.photoTagText}>
-                  {categoryName((photo as CompanyPhoto).categoryId)}
-                </Text>
+                <Text style={styles.photoTagText}>모든 서비스 공통</Text>
               </View>
             )}
             <Pressable
@@ -576,17 +583,17 @@ function PhotoStackSection({
             </Pressable>
           </>
         )}
-        captionSlot={
-          showCaptions
-            ? (photo) => (
-                <CaptionInput photoId={photo.id} initialCaption={(photo as CompanyPhoto).caption} />
-              )
-            : undefined
-        }
+        captionSlot={(photo) => (
+          <CaptionInput photoId={photo.id} initialCaption={(photo as CompanyPhoto).caption} />
+        )}
         extraTile={
           <Pressable onPress={pick} disabled={uploading} style={styles.addPhotoTile}>
             <Text style={styles.addPhotoTileText}>
-              {uploading ? "업로드중" : "+ 사진 추가"}
+              {uploading
+                ? "업로드중"
+                : `+ ${hasTabs && selectedName ? `${selectedName} ` : ""}${
+                    mode === "SITE_TEMPLATE" ? "사진 추가" : "상세 이미지 추가"
+                  }`}
             </Text>
           </Pressable>
         }
@@ -623,7 +630,7 @@ function CaptionInput({
         value={value}
         onChangeText={setValue}
         onBlur={handleBlur}
-        placeholder="사진 설명 (선택)"
+        placeholder="이 사진 아래에 들어갈 설명을 적어주세요"
         placeholderTextColor={colors.textFaint}
         maxLength={60}
         style={styles.captionInput}
@@ -1116,15 +1123,19 @@ const styles = StyleSheet.create({
   modeCardActive: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
   modeCardTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
   modeCardDesc: { marginTop: 2, fontSize: fontSize.xs, color: colors.textMuted },
+  modeHint: { marginTop: spacing.xs + 2, fontSize: fontSize.xs, color: colors.textFaint },
   captionInput: {
-    marginTop: spacing.xs + 2,
+    marginTop: spacing.md,
     borderWidth: 1,
+    borderStyle: "dashed",
     borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs + 2,
-    fontSize: fontSize.sm,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
     color: colors.text,
+    textAlign: "center",
   },
   captionErrorText: { marginTop: 2, fontSize: fontSize.xs, color: colors.danger },
   photoDeleteButtonText: { color: colors.onPrimary, fontSize: fontSize.md, lineHeight: fontSize.md },

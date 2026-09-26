@@ -11,11 +11,11 @@ const COLLAPSED_HEIGHT = 1500;
 export type PhotoItem = {
   id: string;
   url: string;
-  // Shown as a text block right under this photo (SITE_TEMPLATE mode) —
-  // absent/null in CUSTOM_IMAGE mode, where photos stack with zero gap
-  // instead. See DetailPageMode on the web repo's Company model.
+  // Shown under the photo only in the "template" variant.
   caption?: string | null;
 };
+
+const TEMPLATE_GAP = spacing.xl;
 
 // Rough per-photo allowance added to the height estimate below when a
 // caption is present — RN has no ResizeObserver equivalent to measure real
@@ -54,6 +54,7 @@ export function PhotoStack({
   extraTile,
   photoOverlay,
   captionSlot,
+  variant = "custom",
 }: {
   /** Omit when this stack is nested under a heading the caller already
    * renders itself (e.g. the profile screen's mode-toggle wrapper). */
@@ -64,6 +65,10 @@ export function PhotoStack({
   /** Replaces the plain caption <Text> — the profile screen's
    * SITE_TEMPLATE editor uses this to render an editable input instead. */
   captionSlot?: (photo: PhotoItem) => ReactNode;
+  /** "custom" (CUSTOM_IMAGE): edge-to-edge, no gap, no captions.
+   * "template" (SITE_TEMPLATE): spaced, rounded photos each followed by a
+   * centered caption block. Mirrors the web PhotoStack's variant. */
+  variant?: "custom" | "template";
 }) {
   const [ratios, setRatios] = useState<Record<string, number>>({});
   const [expanded, setExpanded] = useState(false);
@@ -84,12 +89,14 @@ export function PhotoStack({
 
   if (photos.length === 0 && !extraTile) return null;
 
+  const isTemplate = variant === "template";
   const allLoaded = photos.every((p) => ratios[p.id] != null);
   const totalHeight = photos.reduce((sum, p) => {
     const ratio = ratios[p.id];
     const photoHeight = ratio ? SCREEN_WIDTH / ratio : 0;
-    const captionHeight = p.caption ? CAPTION_HEIGHT_ESTIMATE : 0;
-    return sum + photoHeight + captionHeight;
+    const captionHeight = isTemplate && (p.caption || captionSlot) ? CAPTION_HEIGHT_ESTIMATE : 0;
+    const gap = isTemplate ? TEMPLATE_GAP : 0;
+    return sum + photoHeight + captionHeight + gap;
   }, 0);
   const overflowing = allLoaded && totalHeight > COLLAPSED_HEIGHT;
   const collapsible = overflowing && !expanded;
@@ -97,12 +104,12 @@ export function PhotoStack({
   return (
     <View style={styles.section}>
       {title && <Text style={styles.sectionTitle}>{title}</Text>}
-      <View style={[styles.stack, collapsible && styles.collapsed]}>
+      <View style={[styles.stack, isTemplate && styles.templateStack, collapsible && styles.collapsed]}>
         {photos.map((photo) => {
           const ratio = ratios[photo.id];
           return (
             <View key={photo.id}>
-              <View style={styles.photoWrap}>
+              <View style={[styles.photoWrap, isTemplate && styles.templatePhotoWrap]}>
                 {ratio ? (
                   <ExpoImage
                     source={{ uri: photo.url }}
@@ -114,9 +121,10 @@ export function PhotoStack({
                 )}
                 {photoOverlay?.(photo)}
               </View>
-              {captionSlot
-                ? captionSlot(photo)
-                : photo.caption && <Text style={styles.caption}>{photo.caption}</Text>}
+              {isTemplate &&
+                (captionSlot
+                  ? captionSlot(photo)
+                  : photo.caption && <Text style={styles.caption}>{photo.caption}</Text>)}
             </View>
           );
         })}
@@ -136,13 +144,17 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
   stack: { marginTop: spacing.sm },
   collapsed: { maxHeight: COLLAPSED_HEIGHT, overflow: "hidden" },
+  templateStack: { gap: TEMPLATE_GAP },
   photoWrap: { width: "100%", backgroundColor: colors.surfaceMuted },
+  templatePhotoWrap: { borderRadius: radius.lg, overflow: "hidden" },
   caption: {
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
     fontSize: fontSize.md,
-    lineHeight: fontSize.md + 6,
+    fontWeight: fontWeight.medium,
+    lineHeight: fontSize.md + 8,
     color: colors.text,
+    textAlign: "center",
   },
   photo: { width: "100%" },
   photoLoading: { aspectRatio: 1 },
