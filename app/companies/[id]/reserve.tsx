@@ -23,7 +23,10 @@ import { Button } from "../../../src/components/Button";
 import { TextField } from "../../../src/components/TextField";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
 
-const TIME_SLOTS = [
+// Initial state before the company's own hours load — matches what every
+// company used to share before per-company 영업시간 existed, so there's no
+// empty flash while fetchCompanyDetail is in flight.
+const DEFAULT_TIME_SLOTS = [
   "09:00",
   "10:00",
   "11:00",
@@ -61,6 +64,7 @@ export default function ReserveScreen() {
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [timeSlots, setTimeSlots] = useState<string[]>(DEFAULT_TIME_SLOTS);
   const isDesiredDateBlocked = blockedDates.includes(desiredDate);
   const [fetchedBlockedTimes, setFetchedBlockedTimes] = useState<string[]>([]);
   const blockedTimes = isDesiredDateBlocked ? [] : fetchedBlockedTimes;
@@ -88,6 +92,7 @@ export default function ReserveScreen() {
     fetchCompanyDetail(params.id)
       .then((detail) => {
         setBlockedDates(detail.blockedDates);
+        setTimeSlots(detail.timeSlots);
         setServices(detail.services);
         const initial = detail.services.find((s) => s.categoryId === params.categoryId);
         if (initial) loadSavedAnswers(initial);
@@ -113,7 +118,7 @@ export default function ReserveScreen() {
     };
   }, [params.id, desiredDate, isDesiredDateBlocked]);
 
-  const allTimesBlocked = blockedTimes.length >= TIME_SLOTS.length;
+  const allTimesBlocked = timeSlots.length === 0 || blockedTimes.length >= timeSlots.length;
 
   // Pre-fills 평수/브랜드/형태/대수 etc. from whatever the customer saved via
   // the categories screen's "정보입력" button, so they don't have to retype
@@ -310,7 +315,7 @@ export default function ReserveScreen() {
 
       <Text style={styles.label}>희망 시간</Text>
       <View style={styles.timeGrid}>
-        {TIME_SLOTS.map((slot) => {
+        {timeSlots.map((slot) => {
           const blocked = blockedTimes.includes(slot);
           return (
             <Pressable

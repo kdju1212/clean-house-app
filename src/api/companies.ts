@@ -102,6 +102,10 @@ export type CompanyDetail = {
   // repo. The reserve screen uses this to warn before submitting; the
   // server re-checks it regardless.
   blockedDates: string[];
+  // This company's own bookable hours (from its 영업시간/예약 텀 — see
+  // generateTimeSlots on the web repo), never a fixed list every company
+  // used to share. The reserve screen renders these as its time chips.
+  timeSlots: string[];
   regionNames: string[];
   averageRating: number;
   reviewCount: number;
