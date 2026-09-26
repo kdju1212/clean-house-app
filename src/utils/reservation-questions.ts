@@ -20,15 +20,54 @@ export type ReservationQuestion = {
 const AREA_QUESTIONS: ReservationQuestion[] = [
   { key: "area", label: "평수", type: "number", placeholder: "예: 24", required: true },
   { key: "rooms", label: "방 개수", type: "number", placeholder: "예: 3", required: false },
+  { key: "toilets", label: "화장실 개수", type: "number", placeholder: "예: 2", required: false },
+  {
+    key: "condition",
+    label: "오염도",
+    type: "select",
+    options: ["신축(입주 전)", "거주 중"],
+    required: false,
+  },
+  {
+    key: "balconyExtended",
+    label: "베란다 확장 여부",
+    type: "select",
+    options: ["예", "아니오"],
+    required: false,
+  },
+  {
+    key: "builtInCloset",
+    label: "붙박이장 개수",
+    type: "number",
+    placeholder: "예: 2",
+    required: false,
+  },
 ];
 
 export const CATEGORY_QUESTIONS: Record<string, ReservationQuestion[]> = {
   "move-in": AREA_QUESTIONS,
   moving: AREA_QUESTIONS,
   residential: AREA_QUESTIONS,
-  office: [{ key: "area", label: "평수", type: "number", placeholder: "예: 30", required: true }],
-  restaurant: [{ key: "area", label: "평수", type: "number", placeholder: "예: 20", required: true }],
-  store: [{ key: "area", label: "평수", type: "number", placeholder: "예: 20", required: true }],
+  office: [
+    { key: "area", label: "평수", type: "number", placeholder: "예: 30", required: true },
+    { key: "occupants", label: "상주 인원", type: "number", placeholder: "예: 15", required: false },
+    { key: "toilets", label: "화장실 개수", type: "number", placeholder: "예: 2", required: false },
+  ],
+  restaurant: [
+    { key: "area", label: "평수", type: "number", placeholder: "예: 20", required: true },
+    {
+      key: "hood",
+      label: "주방 후드/기름때 청소",
+      type: "select",
+      options: ["필요", "필요없음"],
+      required: false,
+    },
+    { key: "toilets", label: "화장실 개수", type: "number", placeholder: "예: 1", required: false },
+  ],
+  store: [
+    { key: "area", label: "평수", type: "number", placeholder: "예: 20", required: true },
+    { key: "toilets", label: "화장실 개수", type: "number", placeholder: "예: 1", required: false },
+  ],
   aircon: [
     { key: "brand", label: "브랜드", type: "text", placeholder: "예: LG, 삼성", required: false },
     {
@@ -40,6 +79,13 @@ export const CATEGORY_QUESTIONS: Record<string, ReservationQuestion[]> = {
       multiple: true,
     },
     { key: "count", label: "대수", type: "number", placeholder: "예: 2", required: true },
+    {
+      key: "systemDirection",
+      label: "시스템에어컨 방향 수 (해당 시)",
+      type: "select",
+      options: ["1way", "2way", "4way", "매립덕트형"],
+      required: false,
+    },
   ],
   washer: [
     { key: "brand", label: "브랜드", type: "text", placeholder: "예: LG, 삼성", required: false },
@@ -52,6 +98,14 @@ export const CATEGORY_QUESTIONS: Record<string, ReservationQuestion[]> = {
       multiple: true,
     },
     { key: "capacity", label: "용량 (kg)", type: "number", placeholder: "예: 15", required: false },
+    { key: "count", label: "세탁기 대수", type: "number", placeholder: "예: 1", required: true },
+    {
+      key: "disassembly",
+      label: "완전분해 청소",
+      type: "select",
+      options: ["필요", "필요없음"],
+      required: false,
+    },
   ],
 };
 
