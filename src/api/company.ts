@@ -211,8 +211,23 @@ export async function transitionReservation(
 
 /** Upcoming 휴무일 ("YYYY-MM-DD") plus today's date in Korea per the server,
  * so the calendar agrees with the server's "no past dates" rule. */
-export async function fetchBlockedDates(): Promise<{ dates: string[]; today: string }> {
-  return apiFetch<{ dates: string[]; today: string }>("/api/mobile/company/blocked-dates");
+export type BlockedDatesInfo = {
+  dates: string[];
+  /** 정기 휴무, 0=일 … 6=토. */
+  closedWeekdays: number[];
+  today: string;
+};
+
+export async function fetchBlockedDates(): Promise<BlockedDatesInfo> {
+  const info = await apiFetch<BlockedDatesInfo>("/api/mobile/company/blocked-dates");
+  return { ...info, closedWeekdays: info.closedWeekdays ?? [] };
+}
+
+export async function setClosedWeekdays(closedWeekdays: number[]): Promise<void> {
+  await apiFetch("/api/mobile/company/blocked-dates", {
+    method: "PATCH",
+    body: { closedWeekdays },
+  });
 }
 
 export async function setBlockedDate(date: string, blocked: boolean): Promise<void> {

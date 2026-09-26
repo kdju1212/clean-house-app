@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
-import { Dimensions, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import {
   fetchBlockedDates,
   fetchCompanyReservations,
   setBlockedDate,
+  setClosedWeekdays,
   transitionReservation,
   type CompanyReservation,
 } from "../../../src/api/company";
@@ -60,6 +61,7 @@ export default function CompanyReservationsScreen() {
   const [view, setView] = useState<"list" | "calendar">("list");
   const [reservations, setReservations] = useState<CompanyReservation[] | null>(null);
   const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+  const [closedWeekdays, setClosedWeekdaysState] = useState<number[]>([]);
   const [serverToday, setServerToday] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,8 +70,9 @@ export default function CompanyReservationsScreen() {
     return Promise.all([
       fetchCompanyReservations(activeStatus || undefined).then(setReservations),
       fetchBlockedDates()
-        .then(({ dates, today }) => {
+        .then(({ dates, closedWeekdays: weekdays, today }) => {
           setBlockedDates(new Set(dates));
+          setClosedWeekdaysState(weekdays);
           setServerToday(today);
         })
         .catch(() => {}),
@@ -172,6 +175,8 @@ export default function CompanyReservationsScreen() {
           onAction={handleAction}
           blockedDates={blockedDates}
           onBlockedDatesChange={setBlockedDates}
+          closedWeekdays={closedWeekdays}
+          onClosedWeekdaysChange={setClosedWeekdaysState}
           todayKey={serverToday ?? localTodayKey()}
         />
       )}
@@ -246,6 +251,8 @@ function ReservationCalendar({
   onAction,
   blockedDates,
   onBlockedDatesChange,
+  closedWeekdays,
+  onClosedWeekdaysChange,
   todayKey,
 }: {
   reservations: CompanyReservation[];
@@ -253,8 +260,32 @@ function ReservationCalendar({
   onAction: (id: string, action: "accept" | "reject" | "complete" | "no_show") => void;
   blockedDates: Set<string>;
   onBlockedDatesChange: (next: Set<string>) => void;
+  /** 정기 휴무, 0=일 … 6=토. */
+  closedWeekdays: number[];
+  onClosedWeekdaysChange: (next: number[]) => void;
   todayKey: string;
 }) {
+  const [weekdaysPending, setWeekdaysPending] = useState(false);
+  const weekdayOf = (dateStr: string) => new Date(`${dateStr}T00:00:00`).getDay();
+  // Only from today on — the rule says nothing about days before it was set.
+  const isWeeklyOff = (dateStr: string) =>
+    dateStr >= todayKey && closedWeekdays.includes(weekdayOf(dateStr));
+
+  async function toggleWeekday(day: number) {
+    const next = closedWeekdays.includes(day)
+      ? closedWeekdays.filter((d) => d !== day)
+      : [...closedWeekdays, day].sort((a, b) => a - b);
+    setWeekdaysPending(true);
+    setBlockError(null);
+    try {
+      await setClosedWeekdays(next);
+      onClosedWeekdaysChange(next);
+    } catch (err) {
+      setBlockError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    } finally {
+      setWeekdaysPending(false);
+    }
+  }
   const [monthCursor, setMonthCursor] = useState(() => ({
     year: Number(todayKey.slice(0, 4)),
     month: Number(todayKey.slice(5, 7)) - 1,
@@ -312,7 +343,7 @@ function ReservationCalendar({
   );
 
   return (
-    <View style={styles.calendar}>
+    <ScrollView style={styles.calendar} contentContainerStyle={styles.calendarContent}>
       <View style={styles.calendarHeader}>
         <Pressable onPress={() => shiftMonth(-1)} hitSlop={8}>
           <Text style={styles.calendarNav}>‹</Text>
@@ -340,7 +371,7 @@ function ReservationCalendar({
           const needsAction = dayReservations.some((r) => r.status === "REQUESTED");
           const isSelected = day === selectedDate;
           const isToday = day === todayKey;
-          const isBlocked = blockedDates.has(day);
+          const isBlocked = blockedDates.has(day) || isWeeklyOff(day);
           return (
             <Pressable
               key={day}
@@ -403,6 +434,36 @@ function ReservationCalendar({
         </View>
       </View>
 
+      <View style={styles.weeklyBox}>
+        <Text style={styles.weeklyTitle}>정기 휴무</Text>
+        <View style={styles.weeklyRow}>
+          {WEEKDAY_LABELS.map((name, day) => {
+            const active = closedWeekdays.includes(day);
+            return (
+              <Pressable
+                key={name}
+                onPress={() => toggleWeekday(day)}
+                disabled={weekdaysPending}
+                style={[
+                  styles.weeklyChip,
+                  active && styles.weeklyChipActive,
+                  weekdaysPending && styles.blockButtonDisabled,
+                ]}
+              >
+                <Text style={[styles.weeklyChipText, active && styles.weeklyChipTextActive]}>
+                  {name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={styles.weeklyHint}>
+          {closedWeekdays.length > 0
+            ? `매주 ${closedWeekdays.map((d) => WEEKDAY_LABELS[d]).join("·")}요일은 예약을 받지 않아요.`
+            : "쉬는 요일을 누르면 매주 그 요일엔 예약을 받지 않아요."}
+        </Text>
+      </View>
+
       <View style={styles.calendarSelectedHeader}>
         <Text style={styles.calendarSelectedLabel}>
           {new Date(`${selectedDate}T00:00:00`).toLocaleDateString("ko-KR", {
@@ -411,11 +472,15 @@ function ReservationCalendar({
             weekday: "short",
           })}
           {selectedReservations.length > 0 ? ` · ${selectedReservations.length}건` : ""}
-          {blockedDates.has(selectedDate) ? (
+          {isWeeklyOff(selectedDate) ? (
+            <Text style={styles.calendarBlockedInline}>
+              {` 매주 ${WEEKDAY_LABELS[weekdayOf(selectedDate)]}요일 정기 휴무`}
+            </Text>
+          ) : blockedDates.has(selectedDate) ? (
             <Text style={styles.calendarBlockedInline}> 휴무일</Text>
           ) : null}
         </Text>
-        {selectedDate >= todayKey && (
+        {selectedDate >= todayKey && !isWeeklyOff(selectedDate) && (
           <Pressable
             onPress={() => toggleBlocked(selectedDate)}
             disabled={blockPending}
@@ -441,7 +506,7 @@ function ReservationCalendar({
         )}
       </View>
       {blockError && <Text style={styles.blockErrorText}>{blockError}</Text>}
-      {blockedDates.has(selectedDate) &&
+      {(blockedDates.has(selectedDate) || isWeeklyOff(selectedDate)) &&
         selectedReservations.some((r) => r.status === "REQUESTED" || r.status === "ACCEPTED") && (
           <Text style={styles.blockHint}>
             휴무일이어도 이미 들어온 예약은 그대로 유지돼요. 새 예약만 막혀요.
@@ -461,7 +526,7 @@ function ReservationCalendar({
           ))}
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -532,15 +597,38 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
   },
-  calendarCellBlocked: { backgroundColor: colors.dangerBg, borderRadius: radius.md },
-  calendarCellTextBlocked: { color: colors.danger },
-  calendarBlockedLabel: { fontSize: 9, lineHeight: 10, color: colors.danger },
-  calendarBlockedInline: { color: colors.danger },
+  calendarContent: { paddingBottom: spacing.xxxl },
+  calendarCellBlocked: { backgroundColor: colors.border, borderRadius: radius.md },
+  calendarCellTextBlocked: { color: colors.textFaint },
+  calendarBlockedLabel: { fontSize: 9, lineHeight: 10, color: colors.textMuted },
+  calendarBlockedInline: { color: colors.textFaint },
+  weeklyBox: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  weeklyTitle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.text },
+  weeklyRow: { flexDirection: "row", gap: spacing.xs, marginTop: spacing.sm },
+  weeklyChip: {
+    flex: 1,
+    height: 32,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  weeklyChipActive: { backgroundColor: colors.textMuted, borderColor: colors.textMuted },
+  weeklyChipText: { fontSize: fontSize.xs, fontWeight: fontWeight.medium, color: colors.textMuted },
+  weeklyChipTextActive: { color: colors.onPrimary },
+  weeklyHint: { marginTop: spacing.xs + 2, fontSize: fontSize.xs, color: colors.textFaint },
   legendRow: { flexDirection: "row", gap: spacing.md, marginTop: spacing.sm, alignItems: "center" },
   legendItem: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   legendText: { fontSize: fontSize.xs, color: colors.textFaint },
   legendBlocked: {
-    backgroundColor: colors.dangerBg,
+    backgroundColor: colors.border,
     paddingHorizontal: 3,
     borderRadius: 3,
     overflow: "hidden",

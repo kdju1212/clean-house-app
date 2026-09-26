@@ -45,9 +45,9 @@ export function CalendarDatePicker({
   value: string;
   onChange: (dateStr: string) => void;
   minDateStr: string;
-  /** "YYYY-MM-DD" dates the company doesn't take reservations on — shown
-   * with a dot, still selectable so the "휴무일" hint below the field can
-   * explain why (the server re-checks regardless). */
+  /** "YYYY-MM-DD" dates the company doesn't take reservations on (one-off
+   * and weekly 휴무일, already expanded by the server) — grayed out and not
+   * selectable. The server re-checks regardless. */
   blockedDates?: string[];
 }) {
   const insets = useSafeAreaInsets();
@@ -123,8 +123,9 @@ export function CalendarDatePicker({
               {cells.map((day, i) => {
                 if (day == null) return <View key={i} style={styles.cell} />;
                 const dateStr = toDateStr(viewYear, viewMonth, day);
-                const disabled = dateStr < minDateStr;
-                const blocked = blockedSet.has(dateStr);
+                const past = dateStr < minDateStr;
+                const blocked = !past && blockedSet.has(dateStr);
+                const disabled = past || blocked;
                 const selected = dateStr === value;
                 return (
                   <Pressable
@@ -136,18 +137,23 @@ export function CalendarDatePicker({
                       setOpen(false);
                     }}
                   >
-                    <View style={[styles.dayCircle, selected && styles.dayCircleSelected]}>
+                    <View
+                      style={[
+                        styles.dayCircle,
+                        blocked && styles.dayCircleBlocked,
+                        selected && !blocked && styles.dayCircleSelected,
+                      ]}
+                    >
                       <Text
                         style={[
                           styles.dayText,
                           disabled && styles.dayTextDisabled,
-                          selected && styles.dayTextSelected,
+                          selected && !blocked && styles.dayTextSelected,
                         ]}
                       >
                         {day}
                       </Text>
                     </View>
-                    {blocked && !disabled && !selected && <View style={styles.blockedDot} />}
                   </Pressable>
                 );
               })}
@@ -212,15 +218,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dayCircleSelected: { backgroundColor: colors.primary },
+  dayCircleBlocked: { backgroundColor: colors.border, borderRadius: radius.sm },
   dayText: { fontSize: fontSize.md, color: colors.text },
   dayTextDisabled: { color: colors.textFaint },
   dayTextSelected: { color: colors.onPrimary, fontWeight: fontWeight.semibold },
-  blockedDot: {
-    position: "absolute",
-    bottom: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.danger,
-  },
 });
