@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Dimensions, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import {
   fetchCompanyReservations,
@@ -31,6 +31,13 @@ const STATUS_FILTERS = [
 ] as const;
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+// A 100%/7 percentage width made every row wrap after 6 cells instead of
+// 7 — RN rounds each cell's percentage to whole pixels before summing, and
+// that rounding pushed the total just over the container's width. Sizing
+// from the actual screen width sidesteps the rounding entirely, the same
+// approach PhotoStack.tsx uses for its own width math.
+const CALENDAR_CELL_SIZE = Math.floor((Dimensions.get("window").width - spacing.xl * 2) / 7);
 
 /** "2026-09-27T00:00:00.000Z" -> "2026-09-27" — the API always sends
  * midnight-UTC for a date-only value, so slicing avoids any local-timezone
@@ -387,7 +394,7 @@ const styles = StyleSheet.create({
   calendarMonth: { fontSize: fontSize.base, fontWeight: fontWeight.bold, color: colors.text },
   weekdayRow: { flexDirection: "row", marginTop: spacing.sm },
   weekdayLabel: {
-    flex: 1,
+    width: CALENDAR_CELL_SIZE,
     textAlign: "center",
     fontSize: fontSize.xs,
     color: colors.textFaint,
@@ -395,8 +402,8 @@ const styles = StyleSheet.create({
   },
   calendarGrid: { flexDirection: "row", flexWrap: "wrap" },
   calendarCell: {
-    width: `${100 / 7}%`,
-    aspectRatio: 1,
+    width: CALENDAR_CELL_SIZE,
+    height: CALENDAR_CELL_SIZE,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
