@@ -30,7 +30,6 @@ import { LoadingView } from "../../src/components/LoadingView";
 import { Button } from "../../src/components/Button";
 import { TextField } from "../../src/components/TextField";
 import { PhotoStack } from "../../src/components/PhotoStack";
-import { PhotoGrid } from "../../src/components/PhotoGrid";
 import { formatPhoneNumber } from "../../src/utils/phone";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../src/theme";
 
@@ -489,18 +488,19 @@ function DetailPageSection({
       </View>
       {modeError && <Text style={styles.errorText}>{modeError}</Text>}
 
-      {mode === "SITE_TEMPLATE" ? (
-        <PhotoGridSection photos={photos} services={services} onChanged={onChanged} />
-      ) : (
-        <PhotoStackSection photos={photos} services={services} onChanged={onChanged} />
-      )}
+      <PhotoStackSection
+        photos={photos}
+        services={services}
+        onChanged={onChanged}
+        showCaptions={mode === "SITE_TEMPLATE"}
+      />
     </Section>
   );
 }
 
 /** Which category the *next* uploaded photo gets tagged with — shared by
- * PhotoStackSection and PhotoGridSection. Hidden when there's nothing to
- * distinguish (0 or 1 registered service). */
+ * PhotoStackSection. Hidden when there's nothing to distinguish (0 or 1
+ * registered service). */
 function CategoryChipPicker({
   value,
   onChange,
@@ -532,6 +532,7 @@ function PhotoStackSection({
   photos,
   services,
   onChanged,
+  showCaptions = false,
 }: {
   photos: CompanyPhoto[];
   // Offered as "이 사진, 어떤 카테고리 사진인가요?" tag choices — only one
@@ -539,6 +540,10 @@ function PhotoStackSection({
   // selector (and each photo's tag badge) stays hidden.
   services: CompanyMe["services"];
   onChanged: () => void;
+  // SITE_TEMPLATE mode only — CUSTOM_IMAGE photos are meant to be
+  // pre-designed banner slices that don't need one, so the input stays
+  // hidden there (see PhotoStack.captionSlot).
+  showCaptions?: boolean;
 }) {
   const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(
     services[0]?.categoryId ?? null
@@ -571,54 +576,13 @@ function PhotoStackSection({
             </Pressable>
           </>
         )}
-        extraTile={
-          <Pressable onPress={pick} disabled={uploading} style={styles.addPhotoTile}>
-            <Text style={styles.addPhotoTileText}>
-              {uploading ? "업로드중" : "+ 사진 추가"}
-            </Text>
-          </Pressable>
+        captionSlot={
+          showCaptions
+            ? (photo) => (
+                <CaptionInput photoId={photo.id} initialCaption={(photo as CompanyPhoto).caption} />
+              )
+            : undefined
         }
-      />
-      {error && <Text style={styles.errorText}>{error}</Text>}
-    </View>
-  );
-}
-
-/** "내 사이트 템플릿" mode — same upload/tag/delete flow as
- * PhotoStackSection, laid out as a grid with an editable caption under
- * each photo instead of one continuous stacked image. */
-function PhotoGridSection({
-  photos,
-  services,
-  onChanged,
-}: {
-  photos: CompanyPhoto[];
-  services: CompanyMe["services"];
-  onChanged: () => void;
-}) {
-  const [uploadCategoryId, setUploadCategoryId] = useState<string | null>(
-    services[0]?.categoryId ?? null
-  );
-  const { uploading, error, pick } = useCompanyPhotoUpload("WORK", uploadCategoryId, onChanged);
-
-  return (
-    <View style={styles.photoStackSection}>
-      <CategoryChipPicker value={uploadCategoryId} onChange={setUploadCategoryId} services={services} />
-      <PhotoGrid
-        photos={photos}
-        photoOverlay={(photo) => (
-          <Pressable
-            onPress={() => {
-              deleteCompanyPhoto(photo.id).then(onChanged);
-            }}
-            style={styles.gridPhotoDeleteButton}
-          >
-            <Text style={styles.photoDeleteButtonText}>×</Text>
-          </Pressable>
-        )}
-        captionSlot={(photo) => (
-          <CaptionInput photoId={photo.id} initialCaption={photo.caption} />
-        )}
         extraTile={
           <Pressable onPress={pick} disabled={uploading} style={styles.addPhotoTile}>
             <Text style={styles.addPhotoTileText}>
@@ -1136,17 +1100,6 @@ const styles = StyleSheet.create({
     top: spacing.sm,
     width: 28,
     height: 28,
-    borderRadius: radius.pill,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gridPhotoDeleteButton: {
-    position: "absolute",
-    right: spacing.xs,
-    top: spacing.xs,
-    width: 24,
-    height: 24,
     borderRadius: radius.pill,
     backgroundColor: "rgba(0,0,0,0.6)",
     alignItems: "center",

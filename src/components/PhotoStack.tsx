@@ -8,7 +8,21 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 // worth before the customer has to opt into the rest.
 const COLLAPSED_HEIGHT = 1500;
 
-export type PhotoItem = { id: string; url: string };
+export type PhotoItem = {
+  id: string;
+  url: string;
+  // Shown as a text block right under this photo (SITE_TEMPLATE mode) —
+  // absent/null in CUSTOM_IMAGE mode, where photos stack with zero gap
+  // instead. See DetailPageMode on the web repo's Company model.
+  caption?: string | null;
+};
+
+// Rough per-photo allowance added to the height estimate below when a
+// caption is present — RN has no ResizeObserver equivalent to measure real
+// rendered height, so unlike the web version this can only ever be an
+// estimate (a couple of text lines' worth), just enough to keep the
+// overflow decision in the right ballpark.
+const CAPTION_HEIGHT_ESTIMATE = 60;
 
 /**
  * Coupang-style detail images: full-width, each at its own natural aspect
@@ -23,6 +37,10 @@ export type PhotoItem = { id: string; url: string };
  * box came out blurry (especially on Android); expo-image's own pipeline
  * decodes at the actual target size instead.
  *
+ * In SITE_TEMPLATE mode each photo can carry its own caption, shown as a
+ * text block right under it — assembling several ordinary photos into
+ * something that still reads as one continuous long page.
+ *
  * Collapses behind a "더 보기" button once total rendered height would
  * exceed the fold — decided from the known aspect ratios rather than a
  * DOM measurement, so it correctly folds a single very tall photo just as
@@ -35,6 +53,7 @@ export function PhotoStack({
   photos,
   extraTile,
   photoOverlay,
+  captionSlot,
 }: {
   /** Omit when this stack is nested under a heading the caller already
    * renders itself (e.g. the profile screen's mode-toggle wrapper). */
@@ -42,6 +61,9 @@ export function PhotoStack({
   photos: PhotoItem[];
   extraTile?: ReactNode;
   photoOverlay?: (photo: PhotoItem) => ReactNode;
+  /** Replaces the plain caption <Text> — the profile screen's
+   * SITE_TEMPLATE editor uses this to render an editable input instead. */
+  captionSlot?: (photo: PhotoItem) => ReactNode;
 }) {
   const [ratios, setRatios] = useState<Record<string, number>>({});
   const [expanded, setExpanded] = useState(false);
@@ -65,7 +87,9 @@ export function PhotoStack({
   const allLoaded = photos.every((p) => ratios[p.id] != null);
   const totalHeight = photos.reduce((sum, p) => {
     const ratio = ratios[p.id];
-    return ratio ? sum + SCREEN_WIDTH / ratio : sum;
+    const photoHeight = ratio ? SCREEN_WIDTH / ratio : 0;
+    const captionHeight = p.caption ? CAPTION_HEIGHT_ESTIMATE : 0;
+    return sum + photoHeight + captionHeight;
   }, 0);
   const overflowing = allLoaded && totalHeight > COLLAPSED_HEIGHT;
   const collapsible = overflowing && !expanded;
@@ -77,17 +101,22 @@ export function PhotoStack({
         {photos.map((photo) => {
           const ratio = ratios[photo.id];
           return (
-            <View key={photo.id} style={styles.photoWrap}>
-              {ratio ? (
-                <ExpoImage
-                  source={{ uri: photo.url }}
-                  style={[styles.photo, { aspectRatio: ratio }]}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={[styles.photo, styles.photoLoading]} />
-              )}
-              {photoOverlay?.(photo)}
+            <View key={photo.id}>
+              <View style={styles.photoWrap}>
+                {ratio ? (
+                  <ExpoImage
+                    source={{ uri: photo.url }}
+                    style={[styles.photo, { aspectRatio: ratio }]}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.photo, styles.photoLoading]} />
+                )}
+                {photoOverlay?.(photo)}
+              </View>
+              {captionSlot
+                ? captionSlot(photo)
+                : photo.caption && <Text style={styles.caption}>{photo.caption}</Text>}
             </View>
           );
         })}
@@ -108,6 +137,13 @@ const styles = StyleSheet.create({
   stack: { marginTop: spacing.sm },
   collapsed: { maxHeight: COLLAPSED_HEIGHT, overflow: "hidden" },
   photoWrap: { width: "100%", backgroundColor: colors.surfaceMuted },
+  caption: {
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.xs,
+    fontSize: fontSize.md,
+    lineHeight: fontSize.md + 6,
+    color: colors.text,
+  },
   photo: { width: "100%" },
   photoLoading: { aspectRatio: 1 },
   moreButton: {
