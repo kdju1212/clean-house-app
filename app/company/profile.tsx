@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -38,6 +38,13 @@ export default function CompanyProfileScreen() {
   const [data, setData] = useState<CompanyMe | null>(null);
   const [categories, setCategories] = useState<Category[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // "기본 정보" (이름/연락처/소개글/영업시간/예약가능/홈페이지) is the one
+  // section here still gated behind its own "저장" button — everything
+  // else (사진, 상세페이지 모드, 설명글) already saves immediately. Tracked
+  // here, not inside InfoSection, so 로그아웃 can check it before wiping
+  // out whatever's half-typed there.
+  const [infoDirty, setInfoDirty] = useState(false);
+  const infoSectionRef = useRef<InfoSectionHandle>(null);
 
   const load = useCallback(() => {
     return fetchCompanyMe().then(setData);
@@ -59,9 +66,26 @@ export default function CompanyProfileScreen() {
     }
   }
 
-  async function handleLogout() {
+  async function doLogout() {
     await logout();
     router.replace("/login");
+  }
+
+  function handleLogout() {
+    if (!infoDirty) {
+      doLogout();
+      return;
+    }
+    Alert.alert("변경된 사항이 있어요", "저장하지 않고 나가면 수정한 내용이 사라져요.", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "저장하고 나가기",
+        onPress: async () => {
+          if (await infoSectionRef.current?.save()) doLogout();
+        },
+      },
+      { text: "저장하지 않고 나가기", style: "destructive", onPress: doLogout },
+    ]);
   }
 
   if (!data || !categories) {
@@ -104,7 +128,12 @@ export default function CompanyProfileScreen() {
         onSaved={load}
       />
 
-      <InfoSection company={data.company} onSaved={load} />
+      <InfoSection
+        ref={infoSectionRef}
+        company={data.company}
+        onSaved={load}
+        onDirtyChange={setInfoDirty}
+      />
 
       <Pressable onPress={handleLogout} style={styles.logoutButton}>
         <Text style={styles.logout}>로그아웃</Text>
@@ -888,13 +917,19 @@ function BusinessHoursPicker({
   );
 }
 
-function InfoSection({
-  company,
-  onSaved,
-}: {
-  company: CompanyMe["company"];
-  onSaved: () => void;
-}) {
+export type InfoSectionHandle = { save: () => Promise<boolean> };
+
+const InfoSection = forwardRef<
+  InfoSectionHandle,
+  {
+    company: CompanyMe["company"];
+    onSaved: () => void;
+    // Only the logout button needs to know — everything else here already
+    // saves immediately, so this is the one place unsaved edits can be
+    // silently lost.
+    onDirtyChange: (dirty: boolean) => void;
+  }
+>(function InfoSection({ company, onSaved, onDirtyChange }, ref) {
   const [name, setName] = useState(company.name);
   const [introText, setIntroText] = useState(company.introText ?? "");
   const [phone, setPhone] = useState(company.phone ? formatPhoneNumber(company.phone) : "");
@@ -903,18 +938,46 @@ function InfoSection({
   const [websiteUrl, setWebsiteUrl] = useState(company.websiteUrl ?? "");
   const [saving, setSaving] = useState(false);
 
-  async function handleSave() {
+  const [savedFields, setSavedFields] = useState({
+    name: company.name,
+    introText: company.introText ?? "",
+    phone: company.phone ? formatPhoneNumber(company.phone) : "",
+    businessHours: company.businessHours ?? "",
+    isAvailable: company.isAvailable,
+    websiteUrl: company.websiteUrl ?? "",
+  });
+  const isDirty =
+    name !== savedFields.name ||
+    introText !== savedFields.introText ||
+    phone !== savedFields.phone ||
+    businessHours !== savedFields.businessHours ||
+    isAvailable !== savedFields.isAvailable ||
+    websiteUrl !== savedFields.websiteUrl;
+
+  useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  /** Returns whether it actually saved — the logout guard needs to know
+   * before it's safe to log out. `silent` skips the "저장됐어요" alert,
+   * since that flow immediately logs out right after. */
+  async function handleSave(silent = false): Promise<boolean> {
     setSaving(true);
     try {
       await updateCompanyProfile({ name, phone, introText, businessHours, isAvailable, websiteUrl });
+      setSavedFields({ name, introText, phone, businessHours, isAvailable, websiteUrl });
       onSaved();
-      Alert.alert("저장 완료", "저장됐어요.");
+      if (!silent) Alert.alert("저장 완료", "저장됐어요.");
+      return true;
     } catch (err) {
       Alert.alert("저장 실패", err instanceof Error ? err.message : "저장에 실패했어요.");
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  useImperativeHandle(ref, () => ({ save: () => handleSave(true) }));
 
   return (
     <Section title="기본 정보">
@@ -957,10 +1020,10 @@ function InfoSection({
         </View>
       </View>
 
-      <Button title="저장" onPress={handleSave} loading={saving} style={styles.saveButton} />
+      <Button title="저장" onPress={() => handleSave()} loading={saving} style={styles.saveButton} />
     </Section>
   );
-}
+});
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
