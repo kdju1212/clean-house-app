@@ -29,7 +29,26 @@ import { RatingDistribution } from "../../../src/components/RatingDistribution";
 import { ScrollToTopButton } from "../../../src/components/ScrollToTopButton";
 import { Icon } from "../../../src/components/Icon";
 import { getPricingQuantityKey, PRICING_UNIT_LABEL } from "../../../src/utils/reservation-questions";
+import { todayDateStr } from "../../../src/components/CalendarDatePicker";
 import { colors, fontSize, fontWeight, radius, spacing } from "../../../src/theme";
+
+const WEEKDAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** "오늘 15:00부터 예약 가능" / "내일 09:00부터 예약 가능" / "9월 30일(수)
+ * 10:00부터 예약 가능" — mirrors the web detail page's formatter. */
+function formatNextAvailableLabel(slot: { date: string; time: string }): string {
+  const todayStr = todayDateStr();
+  const tomorrowStr = new Date(new Date(`${todayStr}T00:00:00`).getTime() + 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  if (slot.date === todayStr) return `오늘 ${slot.time}부터 예약 가능`;
+  if (slot.date === tomorrowStr) return `내일 ${slot.time}부터 예약 가능`;
+
+  const [, month, day] = slot.date.split("-").map(Number);
+  const weekday = WEEKDAY_NAMES[new Date(`${slot.date}T00:00:00`).getDay()];
+  return `${month}월 ${day}일(${weekday}) ${slot.time}부터 예약 가능`;
+}
 
 // Coupang's palette for this screen specifically: blue actions, red price,
 // orange stars — see the web repo's companies/[id] page for the same look.
@@ -224,8 +243,17 @@ export default function CompanyDetailScreen() {
     return <LoadingView />;
   }
 
-  const { company, services, photos, regionNames, averageRating, reviewCount, reviews, isFavorited } =
-    data;
+  const {
+    company,
+    services,
+    photos,
+    regionNames,
+    averageRating,
+    reviewCount,
+    reviews,
+    isFavorited,
+    nextAvailable,
+  } = data;
   const cheapest = services.reduce<Service | null>(
     (min, s) => (!min || s.price < min.price ? s : min),
     null
@@ -326,6 +354,11 @@ export default function CompanyDetailScreen() {
                   {company.isAvailable ? "예약 가능" : "예약 마감"}
                 </Text>
               </View>
+              {nextAvailable && (
+                <Text style={styles.nextAvailableText}>
+                  {formatNextAvailableLabel(nextAvailable)}
+                </Text>
+              )}
             </View>
             <Pressable onPress={openReviews} style={styles.ratingBlock}>
               {reviewCount > 0 ? (
@@ -686,6 +719,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   statusTagText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.onPrimary },
+  nextAvailableText: {
+    marginTop: spacing.xs,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: "#18a058",
+  },
 
   introChip: {
     alignSelf: "flex-start",

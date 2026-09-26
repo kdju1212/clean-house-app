@@ -106,6 +106,10 @@ export type CompanyDetail = {
   // generateTimeSlots on the web repo), never a fixed list every company
   // used to share. The reserve screen renders these as its time chips.
   timeSlots: string[];
+  // Soonest bookable {date, time}, null if nothing opens up within the
+  // scan window (fully booked, on a break, etc.) — see clean_house's
+  // getNextAvailableSlot. Only populated when isAvailable is true.
+  nextAvailable: { date: string; time: string } | null;
   regionNames: string[];
   averageRating: number;
   reviewCount: number;
