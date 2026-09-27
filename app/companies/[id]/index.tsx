@@ -403,10 +403,19 @@ export default function CompanyDetailScreen() {
                 <View style={styles.otherServicesBlock}>
                   <Text style={styles.optionHint}>다른 청소도 가능해요</Text>
                   {otherServices.map((service) => (
-                    <View key={service.id} style={styles.otherServiceRow}>
+                    <Pressable
+                      key={service.id}
+                      style={styles.otherServiceRow}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/companies/[id]",
+                          params: { id, categoryId: service.categoryId },
+                        })
+                      }
+                    >
                       <Text style={styles.otherServiceName}>{service.categoryName}</Text>
                       <Text style={styles.otherServicePrice}>{formatServicePrice(service)}</Text>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               )}
@@ -711,7 +720,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  otherServiceName: { fontSize: fontSize.sm, color: colors.text },
+  otherServiceName: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    textDecorationLine: "underline",
+  },
   otherServicePrice: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text },
   emptyText: { marginTop: spacing.xl, fontSize: fontSize.base, color: colors.textFaint },
 
