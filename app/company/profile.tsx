@@ -140,6 +140,10 @@ export default function CompanyProfileScreen() {
         onDirtyChange={setInfoDirty}
       />
 
+      <Pressable onPress={() => router.push("/company/chat")} style={styles.adminChatButton}>
+        <Text style={styles.adminChatButtonText}>관리자에게 문의</Text>
+      </Pressable>
+
       <Pressable onPress={handleLogout} style={styles.logoutButton}>
         <Text style={styles.logout}>로그아웃</Text>
       </Pressable>
@@ -1274,7 +1278,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   subtitle: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textFaint },
-  logoutButton: { marginTop: spacing.xxl, alignSelf: "flex-start" },
+  adminChatButton: {
+    marginTop: spacing.xxl,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+  },
+  adminChatButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  logoutButton: { marginTop: spacing.lg, alignSelf: "flex-start" },
   logout: { fontSize: fontSize.base, color: colors.textFaint, textDecorationLine: "underline" },
   mainSlotWrap: { marginTop: spacing.lg },
   mainSlot: {

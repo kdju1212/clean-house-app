@@ -67,6 +67,9 @@ export function mapNotificationLinkToRoute(link: string): string {
   // COMPANY_SUSPENDED/COMPANY_REACTIVATED point here — the app's company
   // dashboard lives at /company/profile, not a bare /company.
   if (link === "/company") return "/company/profile";
+  // 관리자 문의 chat messages (CHAT_MESSAGE) point here for a company owner
+  // — the app's own screen matches the web path exactly.
+  if (link === "/company/chat") return link;
 
   const bareReservation = link.match(/^\/reservations\/([^/]+)$/);
   if (bareReservation) return `/reservations/${bareReservation[1]}/chat`;
