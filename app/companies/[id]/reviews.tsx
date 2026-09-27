@@ -72,6 +72,12 @@ export default function CompanyReviewsScreen() {
               ))}
             </ScrollView>
           )}
+          {review.ownerReply && (
+            <View style={styles.ownerReplyBox}>
+              <Text style={styles.ownerReplyLabel}>사장님 답글</Text>
+              <Text style={styles.ownerReplyText}>{review.ownerReply}</Text>
+            </View>
+          )}
         </View>
       ))}
 
@@ -118,6 +124,14 @@ const styles = StyleSheet.create({
   reviewContent: { marginTop: spacing.xs, fontSize: fontSize.base, color: colors.text },
   reviewCardPhotoRow: { marginTop: spacing.sm },
   reviewPhoto: { width: 96, height: 96, borderRadius: radius.md, marginRight: spacing.sm },
+  ownerReplyBox: {
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.infoBg,
+    padding: spacing.sm + 2,
+  },
+  ownerReplyLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.info },
+  ownerReplyText: { marginTop: 2, fontSize: fontSize.sm, color: colors.text },
   zoomOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",

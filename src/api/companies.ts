@@ -77,6 +77,9 @@ export type CompanyReview = {
   photoUrls: string[];
   customerName: string;
   createdAt: string;
+  // The company owner's public reply, if they've written one — see
+  // src/api/company-reviews.ts for where that's managed.
+  ownerReply: string | null;
 };
 
 export type CompanyDetail = {

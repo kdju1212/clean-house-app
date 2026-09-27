@@ -140,6 +140,10 @@ export default function CompanyProfileScreen() {
         onDirtyChange={setInfoDirty}
       />
 
+      <Pressable onPress={() => router.push("/company/reviews")} style={styles.adminChatButton}>
+        <Text style={styles.adminChatButtonText}>리뷰 관리</Text>
+      </Pressable>
+
       <Pressable onPress={() => router.push("/company/chat")} style={styles.adminChatButton}>
         <Text style={styles.adminChatButtonText}>관리자에게 문의</Text>
       </Pressable>
