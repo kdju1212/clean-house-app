@@ -44,6 +44,11 @@ export type CompanyMe = {
     // Empty means "not customized": bookable times are generated from
     // businessHours/예약 텀 instead (see clean_house's generateTimeSlots).
     customTimeSlots: number[];
+    // "예약 텀" settings — see setReservationInterval/setCrewCount/
+    // setSameDayCutoff below.
+    reservationIntervalHours: number;
+    crewCount: number;
+    sameDayCutoffTime: string | null;
   };
   requestedCount: number;
   averageRating: number;
@@ -63,6 +68,30 @@ export async function setCustomTimeSlots(hours: number[]): Promise<void> {
   await apiFetch("/api/mobile/company/custom-time-slots", {
     method: "PATCH",
     body: { customTimeSlots: hours },
+  });
+}
+
+/** "청소 한 건당 소요 시간" — 1 또는 2. */
+export async function setReservationInterval(hours: number): Promise<void> {
+  await apiFetch("/api/mobile/company/schedule", {
+    method: "PATCH",
+    body: { reservationIntervalHours: hours },
+  });
+}
+
+/** "동시 예약 가능 팀 수". */
+export async function setCrewCount(count: number): Promise<void> {
+  await apiFetch("/api/mobile/company/schedule", {
+    method: "PATCH",
+    body: { crewCount: count },
+  });
+}
+
+/** "당일 예약 마감시간" — null clears it (마감 없음). */
+export async function setSameDayCutoff(time: string | null): Promise<void> {
+  await apiFetch("/api/mobile/company/schedule", {
+    method: "PATCH",
+    body: { sameDayCutoffTime: time },
   });
 }
 

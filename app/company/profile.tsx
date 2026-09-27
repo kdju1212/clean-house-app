@@ -14,6 +14,9 @@ import {
   updateCompanyPhotoCaption,
   updateDetailPageMode,
   setCustomTimeSlots,
+  setReservationInterval,
+  setCrewCount,
+  setSameDayCutoff,
   type CompanyMe,
   type CompanyPhoto,
   type DetailPageMode,
@@ -958,6 +961,182 @@ function CustomTimeSlotsPicker({ initial }: { initial: number[] }) {
   );
 }
 
+const CREW_COUNTS = [1, 2, 3, 4, 5];
+
+/** "동시에 몇 팀까지 예약받을 수 있나요" — a company with 여러 팀 can take
+ * that many bookings for the same time slot before it's actually full,
+ * instead of the exact time immediately blocking every other customer.
+ * Mirrors the web repo's CrewCountPicker. */
+function CrewCountPicker({ initial }: { initial: number }) {
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function choose(count: number) {
+    if (count === value) return;
+    const previous = value;
+    setValue(count);
+    setSaving(true);
+    setError(null);
+    try {
+      await setCrewCount(count);
+    } catch (err) {
+      setValue(previous);
+      setError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <View>
+      <View style={styles.hoursChipGrid}>
+        {CREW_COUNTS.map((count) => {
+          const active = value === count;
+          return (
+            <Pressable
+              key={count}
+              onPress={() => choose(count)}
+              disabled={saving}
+              style={[styles.hoursChip, active && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{count}팀</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        {value > 1
+          ? `같은 시간대에 최대 ${value}팀까지 예약을 받을 수 있어요. 그 시간이 ${value}건 다 차야 다른 고객에게 막혀요.`
+          : "혼자(또는 한 팀만) 운영 중이라 같은 시간에는 한 건만 받을 수 있어요."}
+      </Text>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+}
+
+const INTERVAL_OPTIONS = [
+  { hours: 1, label: "1시간" },
+  { hours: 2, label: "2시간" },
+];
+
+/** "예약 텀" — how many hours one visit occupies, so the next booking can't
+ * land before a crew is realistically free. Mirrors the web repo's
+ * ReservationIntervalPicker. */
+function ReservationIntervalPicker({ initial }: { initial: number }) {
+  const [value, setValue] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function choose(hours: number) {
+    if (hours === value) return;
+    const previous = value;
+    setValue(hours);
+    setSaving(true);
+    setError(null);
+    try {
+      await setReservationInterval(hours);
+    } catch (err) {
+      setValue(previous);
+      setError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <View>
+      <View style={styles.hoursChipGrid}>
+        {INTERVAL_OPTIONS.map((opt) => {
+          const active = value === opt.hours;
+          return (
+            <Pressable
+              key={opt.hours}
+              onPress={() => choose(opt.hours)}
+              disabled={saving}
+              style={[styles.hoursChip, active && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        한 팀이 한 건을 맡으면 몇 시간짜리 일감인지에 맞춰서, 그 시간 동안은
+        같은 팀 몫의 예약이 안 들어오게 해요. 예: 2시간으로 하면 13시 예약이
+        있을 때 14시는 막히고 15시부터 다시 예약할 수 있어요.
+      </Text>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+}
+
+// Business hours can run as late as 23:00, so the cutoff choices need to
+// reach at least that far too.
+const CUTOFF_OPTIONS = [
+  "12:00", "13:00", "14:00", "15:00", "16:00",
+  "17:00", "18:00", "19:00", "20:00", "21:00", "22:00",
+];
+
+/** "당일 예약 마감시간" — after this clock time, today stops accepting new
+ * bookings for any remaining slot. "마감 없음" keeps same-day booking open
+ * until each slot's own time passes. Mirrors the web repo's
+ * SameDayCutoffPicker. */
+function SameDayCutoffPicker({ initial }: { initial: string | null }) {
+  const [value, setValue] = useState<string | null>(initial);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function choose(time: string | null) {
+    if (time === value) return;
+    const previous = value;
+    setValue(time);
+    setSaving(true);
+    setError(null);
+    try {
+      await setSameDayCutoff(time);
+    } catch (err) {
+      setValue(previous);
+      setError(err instanceof Error ? err.message : "저장에 실패했어요.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <View>
+      <View style={styles.hoursChipGrid}>
+        <Pressable
+          onPress={() => choose(null)}
+          disabled={saving}
+          style={[styles.hoursChip, value === null && styles.chipActive]}
+        >
+          <Text style={[styles.chipText, value === null && styles.chipTextActive]}>마감 없음</Text>
+        </Pressable>
+        {CUTOFF_OPTIONS.map((time) => {
+          const active = value === time;
+          return (
+            <Pressable
+              key={time}
+              onPress={() => choose(time)}
+              disabled={saving}
+              style={[styles.hoursChip, active && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{time}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        {value
+          ? `${value} 이후에는 오늘 날짜로 새 예약을 받지 않아요. 내일 이후 날짜는 영향 없어요.`
+          : "당일 예약은 각 시간이 실제로 지나기 전까지 계속 받아요."}
+      </Text>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+}
+
 export type InfoSectionHandle = { save: () => Promise<boolean> };
 
 const InfoSection = forwardRef<
@@ -1030,6 +1209,15 @@ const InfoSection = forwardRef<
 
       <Text style={[styles.infoLabel, styles.hoursLabel]}>특정 시간만 예약 받기</Text>
       <CustomTimeSlotsPicker initial={company.customTimeSlots} />
+
+      <Text style={[styles.infoLabel, styles.hoursLabel]}>동시 예약 가능 팀 수</Text>
+      <CrewCountPicker initial={company.crewCount} />
+
+      <Text style={[styles.infoLabel, styles.hoursLabel]}>청소 한 건당 소요 시간</Text>
+      <ReservationIntervalPicker initial={company.reservationIntervalHours} />
+
+      <Text style={[styles.infoLabel, styles.hoursLabel]}>당일 예약 마감시간</Text>
+      <SameDayCutoffPicker initial={company.sameDayCutoffTime} />
 
       <TextField
         label="홈페이지 주소 (선택)"
