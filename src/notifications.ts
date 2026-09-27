@@ -64,6 +64,9 @@ export async function registerForPushNotifications(): Promise<void> {
 export function mapNotificationLinkToRoute(link: string): string {
   if (/^\/reservations\/[^/]+\/(chat|review)$/.test(link)) return link;
   if (/^\/company\/reservations\/[^/]+$/.test(link)) return link;
+  // COMPANY_SUSPENDED/COMPANY_REACTIVATED point here — the app's company
+  // dashboard lives at /company/profile, not a bare /company.
+  if (link === "/company") return "/company/profile";
 
   const bareReservation = link.match(/^\/reservations\/([^/]+)$/);
   if (bareReservation) return `/reservations/${bareReservation[1]}/chat`;

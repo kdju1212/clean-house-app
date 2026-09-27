@@ -49,6 +49,9 @@ export type CompanyMe = {
     reservationIntervalHours: number;
     crewCount: number;
     sameDayCutoffTime: string | null;
+    // Set when status is SUSPENDED (an admin forced it) — shown as a banner
+    // in the profile screen. Null otherwise.
+    suspendedReason: string | null;
   };
   requestedCount: number;
   averageRating: number;

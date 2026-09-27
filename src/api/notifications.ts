@@ -10,7 +10,9 @@ export type AppNotification = {
     | "RESERVATION_COMPLETED"
     | "RESERVATION_NO_SHOW"
     | "CHAT_MESSAGE"
-    | "REVIEW_REQUEST";
+    | "REVIEW_REQUEST"
+    | "COMPANY_SUSPENDED"
+    | "COMPANY_REACTIVATED";
   title: string;
   body: string | null;
   link: string | null;

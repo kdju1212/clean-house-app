@@ -143,3 +143,12 @@ export async function toggleCompanyFavorite(id: string): Promise<{ isFavorited: 
     method: "POST",
   });
 }
+
+/** Mirrors the web repo's /companies/[id]/report page — reports the company
+ * itself (fraud, no-show, unfair charges, etc.), not one specific review. */
+export async function reportCompany(id: string, reason: string): Promise<void> {
+  await apiFetch(`/api/mobile/companies/${id}/report`, {
+    method: "POST",
+    body: { reason },
+  });
+}

@@ -22,6 +22,8 @@ const TYPE_ICON: Record<AppNotification["type"], string> = {
   RESERVATION_NO_SHOW: "🚷",
   CHAT_MESSAGE: "💬",
   REVIEW_REQUEST: "⭐",
+  COMPANY_SUSPENDED: "⛔",
+  COMPANY_REACTIVATED: "🔓",
 };
 
 /** Standalone (outside the tabs group), reached from the 내 채팅 tab's bell

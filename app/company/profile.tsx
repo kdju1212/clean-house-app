@@ -264,6 +264,14 @@ function ProfileHeaderSection({
         {reviewCount > 0 ? `★ ${averageRating.toFixed(1)} 리뷰 ${reviewCount}개` : "아직 리뷰가 없어요"}
       </Text>
       {company.introText && <Text style={styles.introPreview}>{company.introText}</Text>}
+      {company.status === "SUSPENDED" && (
+        <View style={styles.suspendedBanner}>
+          <Text style={styles.suspendedText}>
+            관리자에 의해 정지되어 고객에게 노출되지 않고 새 예약도 받을 수 없어요.
+            {company.suspendedReason ? ` 사유: ${company.suspendedReason}` : ""}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -1298,6 +1306,14 @@ const styles = StyleSheet.create({
   headerSection: { marginTop: spacing.xs },
   ratingLine: { fontSize: fontSize.base, color: colors.textMuted },
   introPreview: { marginTop: spacing.sm, fontSize: fontSize.base, color: colors.text },
+  suspendedBanner: {
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.dangerBg,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.sm,
+  },
+  suspendedText: { fontSize: fontSize.xs, color: colors.danger },
   errorText: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.danger },
   section: {
     marginTop: spacing.xl,

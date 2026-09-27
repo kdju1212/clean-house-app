@@ -451,6 +451,9 @@ export default function CompanyDetailScreen() {
               </Pressable>
             )}
           </View>
+          <Pressable onPress={() => router.push({ pathname: "/companies/[id]/report", params: { id } })}>
+            <Text style={styles.reportLink}>업체 신고</Text>
+          </Pressable>
         </View>
 
         <View style={styles.separator} />
@@ -752,6 +755,12 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: fontSize.base, color: colors.textMuted },
   infoValue: { fontSize: fontSize.base, color: colors.text, textAlign: "right", flexShrink: 1 },
   phoneLink: { textDecorationLine: "underline" },
+  reportLink: {
+    marginTop: spacing.sm,
+    fontSize: fontSize.xs,
+    color: colors.textFaint,
+    textDecorationLine: "underline",
+  },
 
   reviewHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   seeAll: { flexDirection: "row", alignItems: "center" },
