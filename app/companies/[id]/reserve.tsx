@@ -54,6 +54,7 @@ export default function ReserveScreen() {
   const [desiredDate, setDesiredDate] = useState("");
   const [desiredTime, setDesiredTime] = useState<string | null>(null);
   const [requestNote, setRequestNote] = useState("");
+  const [agreeToCancellationPolicy, setAgreeToCancellationPolicy] = useState(false);
   const [services, setServices] = useState<CompanyDetailService[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>(
     params.categoryId ? [params.categoryId] : []
@@ -173,6 +174,11 @@ export default function ReserveScreen() {
   }
 
   async function handleSubmit() {
+    if (!agreeToCancellationPolicy) {
+      Alert.alert("알림", "취소 정책에 동의해주세요.");
+      return;
+    }
+
     if (!effectiveDesiredTime) {
       Alert.alert("알림", "희망 시간을 선택해주세요.");
       return;
@@ -222,6 +228,7 @@ export default function ReserveScreen() {
         desiredDate,
         desiredTime: effectiveDesiredTime,
         requestNote: requestNote || undefined,
+        agreeToCancellationPolicy,
       });
 
       await updateStoredPhone(phone);
@@ -366,15 +373,30 @@ export default function ReserveScreen() {
       />
 
       <Text style={styles.policyHint}>
-        예약 시간에 연락 없이 방문하지 않으면 노쇼로 처리될 수 있어요. 취소하실 경우
-        업체에 미리 연락해주세요.
+        예약 시간에 연락 없이 방문하지 않으면 노쇼로 처리될 수 있어요.
       </Text>
+
+      <Pressable
+        style={styles.policyRow}
+        onPress={() => setAgreeToCancellationPolicy((v) => !v)}
+      >
+        <View style={[styles.checkbox, agreeToCancellationPolicy && styles.checkboxSelected]}>
+          {agreeToCancellationPolicy && <Text style={styles.checkmark}>✓</Text>}
+        </View>
+        <Text style={styles.policyRowText}>
+          <Text style={styles.policyRowTextBold}>
+            예약일 하루 전부터(당일 포함)는 예약을 취소할 수 없어요.
+          </Text>{" "}
+          그 전에 취소하려면 내 예약 목록에서 직접 취소하거나 업체에 미리 연락해주세요. 위
+          내용에 동의합니다.
+        </Text>
+      </Pressable>
 
       <Button
         title="예약 신청하기"
         onPress={handleSubmit}
         loading={submitting}
-        disabled={isDesiredDateBlocked || selectedIds.length === 0}
+        disabled={isDesiredDateBlocked || selectedIds.length === 0 || !agreeToCancellationPolicy}
         style={styles.submitButton}
       />
     </Screen>
@@ -526,5 +548,16 @@ const styles = StyleSheet.create({
   timeChipTextSelected: { color: colors.onPrimary },
   timeChipTextBlocked: { color: colors.textFaint },
   policyHint: { marginTop: spacing.lg, fontSize: fontSize.xs, color: colors.textFaint },
+  policyRow: {
+    marginTop: spacing.sm + 2,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+    padding: spacing.sm + 2,
+  },
+  policyRowText: { flex: 1, fontSize: fontSize.xs, color: colors.textMuted },
+  policyRowTextBold: { fontWeight: fontWeight.semibold, color: colors.text },
   submitButton: { marginTop: spacing.sm },
 });

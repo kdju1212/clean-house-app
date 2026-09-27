@@ -33,6 +33,10 @@ export type CreateReservationInput = {
   desiredDate: string; // YYYY-MM-DD
   desiredTime: string; // one of TIME_SLOTS, e.g. "09:00"
   requestNote?: string;
+  // Must be true — the customer has to explicitly agree that a reservation
+  // can't be cancelled the day of or the day before (see the reserve
+  // screen's checkbox) before one can be created.
+  agreeToCancellationPolicy: boolean;
 };
 
 /**

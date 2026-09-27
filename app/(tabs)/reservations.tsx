@@ -22,6 +22,27 @@ const STATUS_LABEL: Record<MyReservation["status"], string> = {
   NO_SHOW: "노쇼",
 };
 
+// A reservation can't be cancelled once it's this close — "당일과 전날은
+// 취소 불가", same rule as the web repo's CANCELLATION_CUTOFF_DAYS
+// (src/lib/reservation.ts) — the server re-checks this regardless.
+const CANCELLATION_CUTOFF_DAYS = 2;
+
+/** Today as "YYYY-MM-DD" in the device's own timezone (customers are all
+ * in Korea) — mirrors company/reservations/index.tsx's localTodayKey. */
+function localTodayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function isCancellable(desiredDateIso: string): boolean {
+  const desiredDateStr = desiredDateIso.slice(0, 10);
+  const daysUntil = Math.round(
+    (Date.parse(`${desiredDateStr}T00:00:00Z`) - Date.parse(`${localTodayKey()}T00:00:00Z`)) /
+      86_400_000
+  );
+  return daysUntil >= CANCELLATION_CUTOFF_DAYS;
+}
+
 type Role = "CUSTOMER" | "COMPANY" | "ADMIN";
 
 /**
@@ -212,13 +233,16 @@ function CustomerReservationsView() {
               <Pressable onPress={() => router.push(`/reservations/${item.id}/chat`)}>
                 <Text style={styles.actionLink}>채팅하기</Text>
               </Pressable>
-              {(item.status === "REQUESTED" || item.status === "ACCEPTED") && (
-                <Pressable onPress={() => confirmCancel(item.id)} disabled={cancellingId === item.id}>
-                  <Text style={styles.actionCancel}>
-                    {cancellingId === item.id ? "취소 중..." : "예약 취소"}
-                  </Text>
-                </Pressable>
-              )}
+              {(item.status === "REQUESTED" || item.status === "ACCEPTED") &&
+                (isCancellable(item.desiredDate) ? (
+                  <Pressable onPress={() => confirmCancel(item.id)} disabled={cancellingId === item.id}>
+                    <Text style={styles.actionCancel}>
+                      {cancellingId === item.id ? "취소 중..." : "예약 취소"}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text style={styles.actionDone}>취소 기한 지남</Text>
+                ))}
               {item.status === "COMPLETED" &&
                 (item.hasReview ? (
                   <Text style={styles.actionDone}>리뷰 작성 완료</Text>
