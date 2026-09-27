@@ -1015,10 +1015,7 @@ function CrewCountPicker({ initial }: { initial: number }) {
   );
 }
 
-const INTERVAL_OPTIONS = [
-  { hours: 1, label: "1시간" },
-  { hours: 2, label: "2시간" },
-];
+const INTERVAL_OPTIONS = [1, 2, 3, 4, 5];
 
 /** "예약 텀" — how many hours one visit occupies, so the next booking can't
  * land before a crew is realistically free. Mirrors the web repo's
@@ -1047,16 +1044,16 @@ function ReservationIntervalPicker({ initial }: { initial: number }) {
   return (
     <View>
       <View style={styles.hoursChipGrid}>
-        {INTERVAL_OPTIONS.map((opt) => {
-          const active = value === opt.hours;
+        {INTERVAL_OPTIONS.map((hours) => {
+          const active = value === hours;
           return (
             <Pressable
-              key={opt.hours}
-              onPress={() => choose(opt.hours)}
+              key={hours}
+              onPress={() => choose(hours)}
               disabled={saving}
               style={[styles.hoursChip, active && styles.chipActive]}
             >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{hours}시간</Text>
             </Pressable>
           );
         })}
