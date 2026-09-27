@@ -129,6 +129,10 @@ function AdminHomeView() {
         ))}
       </View>
 
+      <Pressable onPress={() => router.push("/admin/stats")} style={styles.adminStatsButton}>
+        <Text style={styles.adminStatsButtonText}>매출 통계 보기</Text>
+      </Pressable>
+
       <Pressable onPress={() => router.push("/notifications")} style={styles.adminNotifLink}>
         <Text style={styles.adminNotifLinkText}>알림 보기</Text>
       </Pressable>
@@ -218,7 +222,16 @@ const styles = StyleSheet.create({
   adminCardValue: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text },
   adminCardValueHighlight: { color: colors.accent },
   adminCardLabel: { marginTop: spacing.xs, fontSize: fontSize.xs, color: colors.textMuted },
-  adminNotifLink: { marginTop: spacing.xl, alignSelf: "flex-start" },
+  adminStatsButton: {
+    marginTop: spacing.xl,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+  },
+  adminStatsButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
+  adminNotifLink: { marginTop: spacing.lg, alignSelf: "flex-start" },
   adminNotifLinkText: {
     fontSize: fontSize.base,
     color: colors.textFaint,

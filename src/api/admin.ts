@@ -11,6 +11,23 @@ export async function fetchAdminDashboard(): Promise<AdminDashboard> {
   return apiFetch<AdminDashboard>("/api/mobile/admin/dashboard");
 }
 
+export type AdminMonthlyRevenuePoint = { label: string; revenue: number; count: number };
+
+export type AdminRevenueStats = {
+  today: { revenue: number; count: number };
+  thisMonth: { revenue: number; count: number };
+  allTime: { revenue: number; count: number };
+  newCustomersThisMonth: number;
+  newCompaniesThisMonth: number;
+  activeCompanies: number;
+  monthly: AdminMonthlyRevenuePoint[];
+};
+
+/** Mirrors the web repo's /admin/stats revenue dashboard — months is 6 or 12. */
+export async function fetchAdminStats(months: 6 | 12): Promise<AdminRevenueStats> {
+  return apiFetch<AdminRevenueStats>(`/api/mobile/admin/stats?months=${months}`);
+}
+
 export type AdminCompanyStatus = "PENDING" | "ACTIVE" | "SUSPENDED";
 
 export type AdminCompanyListItem = {
