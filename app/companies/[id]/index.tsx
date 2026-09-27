@@ -396,7 +396,7 @@ export default function CompanyDetailScreen() {
                   {!selectedService && <Text style={styles.priceTilde}>~</Text>}
                 </View>
               )}
-              {services.length > 1 && <Text style={styles.optionHint}>추가 옵션 가능</Text>}
+              {services.length > 1 && <Text style={styles.optionHint}>다른 청소도 가능해요</Text>}
             </>
           ) : (
             <Text style={styles.emptyText}>등록된 서비스가 없어요.</Text>
