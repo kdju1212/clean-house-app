@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import { FlatList, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { fetchMyReservations, type MyReservation } from "../../src/api/reservations";
+import { cancelReservation, fetchMyReservations, type MyReservation } from "../../src/api/reservations";
 import { fetchAdminDashboard, type AdminDashboard } from "../../src/api/admin";
 import { getStoredUser } from "../../src/storage/auth-storage";
 import { API_BASE_URL } from "../../src/api/client";
@@ -143,6 +143,7 @@ function AdminHomeView() {
 function CustomerReservationsView() {
   const [reservations, setReservations] = useState<MyReservation[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const load = useCallback(() => fetchMyReservations().then(setReservations), []);
 
@@ -158,6 +159,25 @@ function CustomerReservationsView() {
       await load();
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  function confirmCancel(id: string) {
+    Alert.alert("예약을 취소할까요?", "취소하면 되돌릴 수 없어요.", [
+      { text: "아니요", style: "cancel" },
+      { text: "취소하기", style: "destructive", onPress: () => handleCancel(id) },
+    ]);
+  }
+
+  async function handleCancel(id: string) {
+    setCancellingId(id);
+    try {
+      await cancelReservation(id);
+      await load();
+    } catch (err) {
+      Alert.alert("취소 실패", err instanceof Error ? err.message : "예약 취소에 실패했어요.");
+    } finally {
+      setCancellingId(null);
     }
   }
 
@@ -192,6 +212,13 @@ function CustomerReservationsView() {
               <Pressable onPress={() => router.push(`/reservations/${item.id}/chat`)}>
                 <Text style={styles.actionLink}>채팅하기</Text>
               </Pressable>
+              {(item.status === "REQUESTED" || item.status === "ACCEPTED") && (
+                <Pressable onPress={() => confirmCancel(item.id)} disabled={cancellingId === item.id}>
+                  <Text style={styles.actionCancel}>
+                    {cancellingId === item.id ? "취소 중..." : "예약 취소"}
+                  </Text>
+                </Pressable>
+              )}
               {item.status === "COMPLETED" &&
                 (item.hasReview ? (
                   <Text style={styles.actionDone}>리뷰 작성 완료</Text>
@@ -250,4 +277,10 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   actionDone: { fontSize: fontSize.sm, color: colors.textFaint },
+  actionCancel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.danger,
+    textDecorationLine: "underline",
+  },
 });

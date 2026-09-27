@@ -49,3 +49,9 @@ export async function createReservation(
     body: input,
   });
 }
+
+/** Mirrors the web repo's /reservations 예약 취소 button — only works while
+ * the reservation is still REQUESTED or ACCEPTED. */
+export async function cancelReservation(reservationId: string): Promise<void> {
+  await apiFetch(`/api/mobile/reservations/${reservationId}/cancel`, { method: "POST" });
+}
