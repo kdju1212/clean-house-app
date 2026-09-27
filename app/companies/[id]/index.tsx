@@ -90,10 +90,11 @@ export default function CompanyDetailScreen() {
   // One shared full-screen viewer for every photo on this screen (hero,
   // review strip, per-review photos) — tap opens it, tap again closes it.
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    initialCategoryId ?? null
-  );
-  const [optionSheetOpen, setOptionSheetOpen] = useState(false);
+  // Only ever set from the arriving ?categoryId= (from the category
+  // listing) — the detail screen no longer offers its own picker among
+  // multiple services; that happens in the reservation form instead (see
+  // handleReserve).
+  const selectedCategoryId = initialCategoryId ?? null;
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [barHeight, setBarHeight] = useState(0);
   const [detailY, setDetailY] = useState(0);
@@ -167,14 +168,17 @@ export default function CompanyDetailScreen() {
     }
   }
 
-  function goToReserve(service: Service) {
+  /** `service` omitted means several services and none preselected — the
+   * reservation form has its own picker (checkboxes, multi-select), so
+   * this just sends the customer there to choose instead of asking twice. */
+  function goToReserve(service: Service | null) {
     if (!data) return;
     router.push({
       pathname: "/companies/[id]/reserve",
       params: {
         id,
         name: data.company.name,
-        categoryId: service.categoryId,
+        ...(service ? { categoryId: service.categoryId } : {}),
       },
     });
   }
@@ -196,13 +200,7 @@ export default function CompanyDetailScreen() {
     const selected =
       data.services.find((s) => s.categoryId === selectedCategoryId) ??
       (data.services.length === 1 ? data.services[0] : null);
-    if (selected) {
-      goToReserve(selected);
-      return;
-    }
-    // Nothing picked yet — the reservation screen has no category picker
-    // of its own, so open the option sheet instead of guessing.
-    setOptionSheetOpen(true);
+    goToReserve(selected);
   }
 
   function handleBack() {
@@ -391,16 +389,6 @@ export default function CompanyDetailScreen() {
 
           {services.length > 0 ? (
             <>
-              <Pressable style={styles.optionBox} onPress={() => setOptionSheetOpen(true)}>
-                <View style={styles.flexShrink}>
-                  <Text style={styles.optionLabel}>옵션선택</Text>
-                  <Text style={styles.optionValue} numberOfLines={1}>
-                    {selectedService ? selectedService.categoryName : "서비스를 선택해주세요"}
-                  </Text>
-                </View>
-                <Icon name="chevronRight" size={24} color={colors.text} />
-              </Pressable>
-
               {priceService && (
                 <View style={styles.priceRow}>
                   {!selectedService && <Text style={styles.priceFrom}>최저</Text>}
@@ -408,6 +396,7 @@ export default function CompanyDetailScreen() {
                   {!selectedService && <Text style={styles.priceTilde}>~</Text>}
                 </View>
               )}
+              {services.length > 1 && <Text style={styles.optionHint}>추가 옵션 가능</Text>}
             </>
           ) : (
             <Text style={styles.emptyText}>등록된 서비스가 없어요.</Text>
@@ -539,52 +528,6 @@ export default function CompanyDetailScreen() {
         />
       )}
 
-      {/* 옵션선택 bottom sheet */}
-      <Modal
-        visible={optionSheetOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setOptionSheetOpen(false)}
-      >
-        <Pressable style={styles.sheetBackdrop} onPress={() => setOptionSheetOpen(false)}>
-          <Pressable style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>옵션선택</Text>
-              <Pressable onPress={() => setOptionSheetOpen(false)} hitSlop={8}>
-                <Text style={styles.sheetClose}>×</Text>
-              </Pressable>
-            </View>
-            <ScrollView style={styles.sheetList}>
-              {services.map((service) => {
-                const isSelected = service.categoryId === selectedService?.categoryId;
-                return (
-                  <Pressable
-                    key={service.id}
-                    style={[styles.sheetRow, isSelected && styles.sheetRowSelected]}
-                    onPress={() => {
-                      setSelectedCategoryId(service.categoryId);
-                      setOptionSheetOpen(false);
-                    }}
-                  >
-                    <View style={styles.flexShrink}>
-                      <Text style={[styles.sheetRowName, isSelected && styles.sheetRowNameSelected]}>
-                        {service.categoryName}
-                      </Text>
-                      {service.description && (
-                        <Text style={styles.sheetRowDesc} numberOfLines={1}>
-                          {service.description}
-                        </Text>
-                      )}
-                    </View>
-                    <Text style={styles.sheetRowPrice}>{formatServicePrice(service)}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
       <Modal
         visible={!!zoomedPhoto}
         transparent
@@ -638,7 +581,6 @@ function InfoRow({
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
-  flexShrink: { flexShrink: 1 },
   noPad: { paddingHorizontal: 0, paddingTop: 0 },
 
   hero: { width: SCREEN_WIDTH, height: SCREEN_WIDTH, backgroundColor: colors.surfaceMuted },
@@ -744,23 +686,11 @@ const styles = StyleSheet.create({
   attributeLabel: { width: 76, fontSize: fontSize.lg, color: colors.textFaint },
   attributeValue: { flex: 1, fontSize: fontSize.lg, color: "#262626" },
 
-  optionBox: {
-    marginTop: spacing.xl,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#d4d4d4",
-    borderRadius: 8,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  optionLabel: { fontSize: fontSize.md, color: colors.textMuted },
-  optionValue: { marginTop: 2, fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
   priceRow: { marginTop: spacing.xl, flexDirection: "row", alignItems: "baseline", gap: 6 },
   priceFrom: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textMuted },
   price: { fontSize: 28, fontWeight: fontWeight.bold, color: RED },
   priceTilde: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: RED },
+  optionHint: { marginTop: spacing.xs + 2, fontSize: fontSize.sm, color: colors.textMuted },
   emptyText: { marginTop: spacing.xl, fontSize: fontSize.base, color: colors.textFaint },
 
   separator: { height: 8, backgroundColor: SEPARATOR },
@@ -846,36 +776,6 @@ const styles = StyleSheet.create({
   barButtonOutline: { borderWidth: 1, borderColor: BLUE, backgroundColor: colors.bg },
   barButtonSolid: { backgroundColor: BLUE },
   barButtonText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold },
-
-  sheetBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
-  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  sheetTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
-  sheetClose: { fontSize: 26, color: colors.textFaint, lineHeight: 28 },
-  sheetList: { maxHeight: 420 },
-  sheetRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  sheetRowSelected: { backgroundColor: "#f0f4ff" },
-  sheetRowName: { fontSize: fontSize.lg, fontWeight: fontWeight.medium, color: colors.text },
-  sheetRowNameSelected: { fontWeight: fontWeight.bold, color: BLUE },
-  sheetRowDesc: { marginTop: 2, fontSize: fontSize.sm, color: colors.textMuted },
-  sheetRowPrice: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
 
   zoomOverlay: {
     flex: 1,
