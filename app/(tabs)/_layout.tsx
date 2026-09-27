@@ -22,11 +22,15 @@ const ICONS: Record<string, IconName> = {
  * 나머지 두 탭(내 예약/마이페이지)의 내용과 이름을 계정 역할에 따라
  * 통째로 바꾼다: COMPANY 계정은 같은 자리에서 "예약관리"(자기 업체로
  * 들어온 예약, app/(tabs)/reservations.tsx 참고)와 "업체 프로필관리"
- * (app/(tabs)/mypage.tsx 참고)를 본다. 홈/내 채팅은 역할과 무관하게
- * 그대로 둬서 업체 사장님도 다른 업체를 둘러보거나 예약할 수 있다.
+ * (app/(tabs)/mypage.tsx 참고)를 본다. ADMIN 계정은 그 자리에서 "관리자"
+ * (웹 관리자 페이지로 연결)와 "내 정보"(계정 정보 + 로그아웃)를 본다 —
+ * 그 전까지는 로그인만 다르고 나머지는 CUSTOMER와 완전히 똑같이 보였다.
+ * 홈/내 채팅은 역할과 무관하게 그대로 둬서 업체 사장님/관리자도 다른
+ * 업체를 둘러보거나 예약할 수 있다.
  */
 export default function TabsLayout() {
   const [isCompany, setIsCompany] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
 
@@ -38,7 +42,10 @@ export default function TabsLayout() {
   // navigation actually lands back on a tab, and doubles as a cheap way to
   // refresh the unread-notification badge whenever the user moves around.
   useEffect(() => {
-    getStoredUser().then((user) => setIsCompany(user?.role === "COMPANY"));
+    getStoredUser().then((user) => {
+      setIsCompany(user?.role === "COMPANY");
+      setIsAdmin(user?.role === "ADMIN");
+    });
     fetchNotifications()
       .then((list) => setUnreadCount(list.filter((n) => !n.isRead).length))
       .catch(() => {});
@@ -64,8 +71,14 @@ export default function TabsLayout() {
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
-      <Tabs.Screen name="reservations" options={{ title: isCompany ? "예약관리" : "내 예약" }} />
-      <Tabs.Screen name="mypage" options={{ title: isCompany ? "업체 프로필관리" : "마이페이지" }} />
+      <Tabs.Screen
+        name="reservations"
+        options={{ title: isAdmin ? "관리자" : isCompany ? "예약관리" : "내 예약" }}
+      />
+      <Tabs.Screen
+        name="mypage"
+        options={{ title: isAdmin ? "내 정보" : isCompany ? "업체 프로필관리" : "마이페이지" }}
+      />
     </Tabs>
   );
 }

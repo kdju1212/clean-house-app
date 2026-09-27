@@ -1,11 +1,13 @@
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { fetchMyReservations, type MyReservation } from "../../src/api/reservations";
 import { getStoredUser } from "../../src/storage/auth-storage";
+import { API_BASE_URL } from "../../src/api/client";
 import { Screen } from "../../src/components/Screen";
 import { Card } from "../../src/components/Card";
 import { Badge } from "../../src/components/Badge";
+import { Button } from "../../src/components/Button";
 import { EmptyState } from "../../src/components/EmptyState";
 import { LoadingView } from "../../src/components/LoadingView";
 import { colors, fontSize, fontWeight, spacing } from "../../src/theme";
@@ -20,29 +22,60 @@ const STATUS_LABEL: Record<MyReservation["status"], string> = {
   NO_SHOW: "노쇼",
 };
 
+type Role = "CUSTOMER" | "COMPANY" | "ADMIN";
+
 /**
- * The 내 예약/예약관리 tab — same slot, different screen depending on the
- * account's role (checked on every focus, not just mount, since this tab
- * can also be reached right after registering a company from elsewhere in
- * the app without this component remounting). A COMPANY account sees the
+ * The 내 예약/예약관리/관리자 tab — same slot, different screen depending on
+ * the account's role (checked on every focus, not just mount, since this
+ * tab can also be reached right after registering a company from elsewhere
+ * in the app without this component remounting). A COMPANY account sees the
  * incoming-reservations list it manages (CompanyReservationsScreen, still
  * living at app/company/reservations so /company/reservations/[id] keeps
- * working as a pushed detail screen); anyone else sees their own bookings.
+ * working as a pushed detail screen); an ADMIN account sees AdminHomeView
+ * (there's no admin CRUD UI on the app itself, just a bridge to the web
+ * admin panel — this used to fall through to the customer view below,
+ * showing an admin login as if it were an ordinary customer); anyone else
+ * sees their own bookings.
  */
 export default function ReservationsTabScreen() {
-  const [isCompany, setIsCompany] = useState<boolean | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      getStoredUser().then((user) => setIsCompany(user?.role === "COMPANY"));
+      getStoredUser().then((user) => setRole((user?.role as Role) ?? "CUSTOMER"));
     }, [])
   );
 
-  if (isCompany === null) {
+  if (role === null) {
     return <LoadingView />;
   }
+  if (role === "COMPANY") {
+    return <CompanyReservationsScreen />;
+  }
+  if (role === "ADMIN") {
+    return <AdminHomeView />;
+  }
+  return <CustomerReservationsView />;
+}
 
-  return isCompany ? <CompanyReservationsScreen /> : <CustomerReservationsView />;
+function AdminHomeView() {
+  return (
+    <Screen>
+      <Text style={styles.title}>관리자</Text>
+      <Text style={styles.adminHint}>
+        업체 승인, 신고 처리, 통계 같은 관리 기능은 아직 앱에 없어요. 웹
+        관리자 페이지에서 이용해주세요.
+      </Text>
+      <Button
+        title="웹 관리자 페이지 열기"
+        onPress={() => Linking.openURL(`${API_BASE_URL}/admin`)}
+        style={styles.adminButton}
+      />
+      <Pressable onPress={() => router.push("/notifications")} style={styles.adminNotifLink}>
+        <Text style={styles.adminNotifLinkText}>알림 보기</Text>
+      </Pressable>
+    </Screen>
+  );
 }
 
 function CustomerReservationsView() {
@@ -115,6 +148,14 @@ function CustomerReservationsView() {
 
 const styles = StyleSheet.create({
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text },
+  adminHint: { marginTop: spacing.md, fontSize: fontSize.sm, color: colors.textMuted },
+  adminButton: { marginTop: spacing.xl },
+  adminNotifLink: { marginTop: spacing.lg, alignSelf: "flex-start" },
+  adminNotifLinkText: {
+    fontSize: fontSize.base,
+    color: colors.textFaint,
+    textDecorationLine: "underline",
+  },
   list: { marginTop: spacing.lg },
   card: { marginBottom: spacing.sm + 2 },
   cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

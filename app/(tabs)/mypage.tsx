@@ -28,30 +28,81 @@ const RESERVATION_SUMMARY = [
   { key: "completed", label: "완료" },
 ] as const;
 
+type Role = "CUSTOMER" | "COMPANY" | "ADMIN";
+
 /**
- * The 마이페이지/업체 프로필관리 tab — same slot as app/(tabs)/reservations.tsx's
- * role switch, and for the same reason: checked on every focus so a fresh
- * registration (done from a screen pushed on top of this tab, not a
- * remount of it) flips this over without needing a full app restart.
+ * The 마이페이지/업체 프로필관리/내 정보 tab — same slot as
+ * app/(tabs)/reservations.tsx's role switch, and for the same reason:
+ * checked on every focus so a fresh registration (done from a screen pushed
+ * on top of this tab, not a remount of it) flips this over without needing
+ * a full app restart. An ADMIN account used to land on CustomerMyPageView
+ * (즐겨찾기, 리뷰 등 고객 전용 내용) same as any CUSTOMER — now it gets its
+ * own minimal account screen instead.
  */
 export default function MyPageTabScreen() {
-  const [isCompany, setIsCompany] = useState<boolean | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      getStoredUser().then((user) => setIsCompany(user?.role === "COMPANY"));
+      getStoredUser().then((user) => setRole((user?.role as Role) ?? "CUSTOMER"));
     }, [])
   );
 
-  if (isCompany === null) {
+  if (role === null) {
     return <LoadingView />;
   }
 
   return (
     <View style={styles.flex}>
-      {isCompany ? <CompanyProfileScreen /> : <CustomerMyPageView />}
+      {role === "COMPANY" ? (
+        <CompanyProfileScreen />
+      ) : role === "ADMIN" ? (
+        <AdminMyPageView />
+      ) : (
+        <CustomerMyPageView />
+      )}
       <ReloadButton />
     </View>
+  );
+}
+
+function AdminMyPageView() {
+  const [data, setData] = useState<MyPageData | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyPage().then(setData);
+    }, [])
+  );
+
+  async function handleLogout() {
+    await logout();
+    router.replace("/login");
+  }
+
+  if (!data) {
+    return <LoadingView />;
+  }
+
+  const { user } = data;
+
+  return (
+    <Screen>
+      <Text style={styles.title}>내 정보</Text>
+
+      <Card style={styles.card}>
+        <Text style={styles.label}>이름</Text>
+        <Text style={styles.value}>{user.name ?? "-"}</Text>
+        <Text style={[styles.label, styles.labelSpaced]}>이메일</Text>
+        <Text style={styles.value}>{user.email ?? "-"}</Text>
+        <Text style={[styles.label, styles.labelSpaced]}>역할</Text>
+        <Text style={styles.value}>관리자</Text>
+      </Card>
+
+      <Pressable onPress={handleLogout} style={styles.logoutButton}>
+        <Text style={styles.logout}>로그아웃</Text>
+      </Pressable>
+    </Screen>
   );
 }
 
