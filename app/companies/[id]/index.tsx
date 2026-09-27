@@ -260,6 +260,9 @@ export default function CompanyDetailScreen() {
     services.find((s) => s.categoryId === selectedCategoryId) ??
     (services.length === 1 ? services[0] : null);
   const priceService = selectedService ?? cheapest;
+  // Everything except the one already shown big above, so the list below
+  // never repeats it.
+  const otherServices = services.filter((s) => s.categoryId !== priceService?.categoryId);
 
   // Untagged photos (categoryId null) show for every category — a
   // company that never bothers tagging anything keeps working exactly
@@ -396,7 +399,17 @@ export default function CompanyDetailScreen() {
                   {!selectedService && <Text style={styles.priceTilde}>~</Text>}
                 </View>
               )}
-              {services.length > 1 && <Text style={styles.optionHint}>다른 청소도 가능해요</Text>}
+              {otherServices.length > 0 && (
+                <View style={styles.otherServicesBlock}>
+                  <Text style={styles.optionHint}>다른 청소도 가능해요</Text>
+                  {otherServices.map((service) => (
+                    <View key={service.id} style={styles.otherServiceRow}>
+                      <Text style={styles.otherServiceName}>{service.categoryName}</Text>
+                      <Text style={styles.otherServicePrice}>{formatServicePrice(service)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </>
           ) : (
             <Text style={styles.emptyText}>등록된 서비스가 없어요.</Text>
@@ -691,6 +704,15 @@ const styles = StyleSheet.create({
   price: { fontSize: 28, fontWeight: fontWeight.bold, color: RED },
   priceTilde: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: RED },
   optionHint: { marginTop: spacing.xs + 2, fontSize: fontSize.sm, color: colors.textMuted },
+  otherServicesBlock: { marginTop: spacing.sm + 2 },
+  otherServiceRow: {
+    marginTop: spacing.xs + 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  otherServiceName: { fontSize: fontSize.sm, color: colors.text },
+  otherServicePrice: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text },
   emptyText: { marginTop: spacing.xl, fontSize: fontSize.base, color: colors.textFaint },
 
   separator: { height: 8, backgroundColor: SEPARATOR },
