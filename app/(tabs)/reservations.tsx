@@ -92,6 +92,7 @@ const ADMIN_CARDS: {
     open: () => router.push({ pathname: "/admin/companies", params: { status: "PENDING" } }),
   },
   { key: "pendingReports", label: "처리 대기 신고", open: () => router.push("/admin/reports") },
+  { key: "unreadSupportMessages", label: "읽지 않은 문의", open: () => router.push("/admin/support") },
   {
     key: "requestedReservations",
     label: "신청 중인 예약",

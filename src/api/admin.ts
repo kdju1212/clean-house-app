@@ -5,6 +5,7 @@ export type AdminDashboard = {
   pendingReports: number;
   requestedReservations: number;
   totalUsers: number;
+  unreadSupportMessages: number;
 };
 
 export async function fetchAdminDashboard(): Promise<AdminDashboard> {

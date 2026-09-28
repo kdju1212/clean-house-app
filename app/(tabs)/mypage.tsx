@@ -263,6 +263,15 @@ function CustomerMyPageView() {
         {saved && <Text style={styles.savedText}>저장됐어요.</Text>}
       </Card>
 
+      <Pressable onPress={() => router.push("/support")}>
+        <Card style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionTitle}>고객센터 문의하기</Text>
+            <Text style={styles.chevron}>→</Text>
+          </View>
+        </Card>
+      </Pressable>
+
       <Pressable onPress={() => router.push("/reservations")}>
         <Card style={styles.card}>
           <View style={styles.rowBetween}>
