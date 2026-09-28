@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { login as kakaoLogin } from "@react-native-seoul/kakao-login";
-import { loginWithKakao, loginWithTestAccount } from "../src/api/auth";
+import { loginWithKakao, loginWithTestAccount, type LoginConsents } from "../src/api/auth";
+import { API_BASE_URL } from "../src/api/client";
 import { getSelectedRegion } from "../src/storage/auth-storage";
 import { Button } from "../src/components/Button";
 import { colors, fontSize, fontWeight, radius, spacing } from "../src/theme";
+
+const CONSENTS: { key: keyof LoginConsents; label: string; path?: string }[] = [
+  { key: "agreeAge", label: "만 14세 이상입니다" },
+  { key: "agreeTerms", label: "이용약관 동의", path: "/terms" },
+  { key: "agreePrivacy", label: "개인정보 수집·이용 동의", path: "/privacy" },
+];
 
 const TEST_ROLES: { role: "CUSTOMER" | "COMPANY" | "ADMIN"; label: string }[] = [
   { role: "CUSTOMER", label: "고객으로 로그인" },
@@ -23,6 +30,12 @@ export default function LoginScreen() {
   // 예약관리 regardless, since it has a company either way — see
   // app/(tabs)/reservations.tsx for how that tab renders its business view).
   const [asCompany, setAsCompany] = useState(false);
+  const [consents, setConsents] = useState<LoginConsents>({
+    agreeAge: false,
+    agreeTerms: false,
+    agreePrivacy: false,
+  });
+  const allAgreed = CONSENTS.every((c) => consents[c.key]);
 
   // Always lands on a real screen with something behind it in the nav
   // stack — company-register used to be reached via a bare replace(), so
@@ -50,7 +63,7 @@ export default function LoginScreen() {
       // build; this call throws in plain Expo Go since the SDK is a custom
       // native module.
       const { accessToken } = await kakaoLogin();
-      const user = await loginWithKakao(accessToken);
+      const user = await loginWithKakao(accessToken, consents);
       await navigateAfterLogin(user.role);
     } catch (err) {
       Alert.alert(
@@ -84,10 +97,46 @@ export default function LoginScreen() {
         {asCompany ? "로그인 후 업체 등록을 진행할게요" : "지역 청소업체를 찾고 바로 예약해보세요"}
       </Text>
 
+      <View style={styles.consentBox}>
+        <Pressable
+          style={styles.consentRow}
+          onPress={() =>
+            setConsents({ agreeAge: !allAgreed, agreeTerms: !allAgreed, agreePrivacy: !allAgreed })
+          }
+        >
+          <View style={[styles.checkbox, allAgreed && styles.checkboxChecked]}>
+            {allAgreed && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.consentAllText}>전체 동의</Text>
+        </Pressable>
+        <View style={styles.consentDivider} />
+        {CONSENTS.map((c) => (
+          <View key={c.key} style={styles.consentItem}>
+            <Pressable
+              style={styles.consentRow}
+              onPress={() => setConsents((prev) => ({ ...prev, [c.key]: !prev[c.key] }))}
+            >
+              <View style={[styles.checkbox, consents[c.key] && styles.checkboxChecked]}>
+                {consents[c.key] && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.consentText}>
+                <Text style={styles.required}>[필수]</Text> {c.label}
+              </Text>
+            </Pressable>
+            {c.path && (
+              <Pressable onPress={() => Linking.openURL(`${API_BASE_URL}${c.path}`)} hitSlop={8}>
+                <Text style={styles.consentView}>보기</Text>
+              </Pressable>
+            )}
+          </View>
+        ))}
+      </View>
+
       <Button
         title="카카오로 로그인"
         onPress={handleKakaoLogin}
         loading={loading}
+        disabled={!allAgreed}
         variant="kakao"
         style={styles.kakaoButton}
       />
@@ -146,7 +195,38 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: "center",
   },
-  kakaoButton: { marginTop: spacing.xxxl + spacing.sm, width: "100%" },
+  consentBox: {
+    marginTop: spacing.xxxl,
+    width: "100%",
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  consentItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
+  consentRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, flexShrink: 1 },
+  consentDivider: { height: 1, backgroundColor: colors.borderLight, marginTop: spacing.md },
+  consentAllText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
+  consentText: { fontSize: fontSize.base, color: colors.text, flexShrink: 1 },
+  required: { color: colors.accent },
+  consentView: { fontSize: fontSize.xs, color: colors.textFaint, textDecorationLine: "underline" },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkmark: { color: colors.onPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  kakaoButton: { marginTop: spacing.lg, width: "100%" },
   companyToggle: { marginTop: spacing.lg, padding: spacing.xs },
   companyToggleText: {
     fontSize: fontSize.xs,

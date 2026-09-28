@@ -15,10 +15,16 @@ type KakaoAuthResponse = {
  * that token against Kakao's own servers rather than trusting anything we
  * send besides the token itself.
  */
-export async function loginWithKakao(kakaoAccessToken: string): Promise<StoredUser> {
+export type LoginConsents = { agreeAge: boolean; agreeTerms: boolean; agreePrivacy: boolean };
+
+export async function loginWithKakao(
+  kakaoAccessToken: string,
+  consents: LoginConsents
+): Promise<StoredUser> {
+  // The server refuses the login unless all three required consents are true.
   const { token, user } = await apiFetch<KakaoAuthResponse>("/api/mobile/auth/kakao", {
     method: "POST",
-    body: { accessToken: kakaoAccessToken },
+    body: { accessToken: kakaoAccessToken, ...consents },
     auth: false,
   });
   await saveSession(token, user);
