@@ -3,7 +3,7 @@ import { Alert, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } f
 import { router, useFocusEffect } from "expo-router";
 import * as Updates from "expo-updates";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchMyPage, updateMyPhone, type MyPageData } from "../../src/api/mypage";
+import { deleteAccount, fetchMyPage, updateMyPhone, type MyPageData } from "../../src/api/mypage";
 import { toggleCompanyFavorite } from "../../src/api/companies";
 import { logout } from "../../src/api/auth";
 import { getStoredUser, updateStoredPhone } from "../../src/storage/auth-storage";
@@ -199,6 +199,30 @@ function CustomerMyPageView() {
     router.replace("/login");
   }
 
+  function handleDeleteAccount() {
+    Alert.alert(
+      "정말 탈퇴하시겠어요?",
+      "탈퇴하면 다시 로그인할 수 없고, 진행 중인 예약은 모두 취소돼요. 작성한 리뷰나 이미 완료된 예약 기록은 업체 측 기록 보존을 위해 남아있어요(작성자는 \"탈퇴한 회원\"으로 표시돼요).",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "탈퇴하기",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch (err) {
+              Alert.alert("탈퇴 실패", err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.");
+              return;
+            }
+            await logout();
+            router.replace("/login");
+          },
+        },
+      ]
+    );
+  }
+
   if (!data) {
     return <LoadingView />;
   }
@@ -324,6 +348,10 @@ function CustomerMyPageView() {
         <Text style={styles.logout}>로그아웃</Text>
       </Pressable>
 
+      <Pressable onPress={handleDeleteAccount} style={styles.deleteAccountButton}>
+        <Text style={styles.deleteAccountText}>회원 탈퇴</Text>
+      </Pressable>
+
       <View style={styles.footerLinks}>
         <Pressable onPress={() => Linking.openURL(`${API_BASE_URL}/terms`)}>
           <Text style={styles.footerLink}>이용약관</Text>
@@ -409,6 +437,8 @@ const styles = StyleSheet.create({
   favoriteRemove: { fontSize: fontSize.lg, color: colors.danger },
   logoutButton: { marginTop: spacing.lg, alignSelf: "flex-start" },
   logout: { fontSize: fontSize.base, color: colors.textFaint, textDecorationLine: "underline" },
+  deleteAccountButton: { marginTop: spacing.sm, alignSelf: "flex-start" },
+  deleteAccountText: { fontSize: fontSize.xs, color: colors.danger, textDecorationLine: "underline" },
   footerLinks: { marginTop: spacing.md, flexDirection: "row", gap: spacing.lg },
   footerLink: { fontSize: fontSize.xs, color: colors.textFaint, textDecorationLine: "underline" },
 });

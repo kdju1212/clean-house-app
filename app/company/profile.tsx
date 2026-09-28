@@ -22,6 +22,7 @@ import {
   type DetailPageMode,
 } from "../../src/api/company";
 import { logout } from "../../src/api/auth";
+import { deleteAccount } from "../../src/api/mypage";
 import { fetchCategories, type Category } from "../../src/api/categories";
 import { searchRegionGroups, type RegionGroupHit } from "../../src/api/regions";
 import {
@@ -91,6 +92,29 @@ export default function CompanyProfileScreen() {
     ]);
   }
 
+  function handleDeleteAccount() {
+    Alert.alert(
+      "정말 탈퇴하시겠어요?",
+      "탈퇴하면 다시 로그인할 수 없고, 업체는 더 이상 예약을 받지 않도록 비활성화돼요. 이미 들어온 예약과 리뷰 기록은 고객 측 기록 보존을 위해 남아있어요.",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "탈퇴하기",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch (err) {
+              Alert.alert("탈퇴 실패", err instanceof Error ? err.message : "잠시 후 다시 시도해주세요.");
+              return;
+            }
+            await doLogout();
+          },
+        },
+      ]
+    );
+  }
+
   if (!data || !categories) {
     return <LoadingView />;
   }
@@ -150,6 +174,10 @@ export default function CompanyProfileScreen() {
 
       <Pressable onPress={handleLogout} style={styles.logoutButton}>
         <Text style={styles.logout}>로그아웃</Text>
+      </Pressable>
+
+      <Pressable onPress={handleDeleteAccount} style={styles.deleteAccountButton}>
+        <Text style={styles.deleteAccountText}>회원 탈퇴</Text>
       </Pressable>
     </Screen>
   );
@@ -1293,6 +1321,8 @@ const styles = StyleSheet.create({
   adminChatButtonText: { fontSize: fontSize.base, fontWeight: fontWeight.semibold, color: colors.text },
   logoutButton: { marginTop: spacing.lg, alignSelf: "flex-start" },
   logout: { fontSize: fontSize.base, color: colors.textFaint, textDecorationLine: "underline" },
+  deleteAccountButton: { marginTop: spacing.sm, alignSelf: "flex-start" },
+  deleteAccountText: { fontSize: fontSize.xs, color: colors.danger, textDecorationLine: "underline" },
   mainSlotWrap: { marginTop: spacing.lg },
   mainSlot: {
     width: "100%",
