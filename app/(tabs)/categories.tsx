@@ -41,7 +41,7 @@ export default function CategoriesScreen() {
   // Search lives behind the header's 🔍 icon, Danggeun-style, instead of
   // an always-visible input — it stays open while there's a query.
   const [searchOpen, setSearchOpen] = useState(false);
-  const [hasUnread, setHasUnread] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const requestIdRef = useRef(0);
 
   // Same 250ms debounce as the region search on the company profile
@@ -119,7 +119,7 @@ export default function CategoriesScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchNotifications()
-        .then((list) => setHasUnread(list.some((n) => !n.isRead)))
+        .then((list) => setUnreadCount(list.filter((n) => !n.isRead).length))
         .catch(() => {});
     }, [])
   );
@@ -176,7 +176,11 @@ export default function CategoriesScreen() {
           </Pressable>
           <Pressable onPress={() => router.push("/notifications")} hitSlop={8}>
             <Icon name="bell" size={26} color={colors.text} />
-            {hasUnread && <View style={styles.unreadDot} />}
+            {unreadCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>{unreadCount > 99 ? "99+" : unreadCount}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
@@ -258,17 +262,21 @@ const styles = StyleSheet.create({
   regionButton: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
   regionName: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold, color: colors.text, flexShrink: 1 },
   headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.xl },
-  unreadDot: {
+  unreadBadge: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: -5,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
     backgroundColor: colors.accent,
     borderWidth: 1.5,
     borderColor: colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  unreadBadgeText: { color: colors.onPrimary, fontSize: 10, fontWeight: fontWeight.bold },
   searchBar: {
     marginTop: spacing.md,
     flexDirection: "row",

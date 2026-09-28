@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Tabs } from "expo-router/tabs";
 import { usePathname } from "expo-router";
 import { getStoredUser } from "../../src/storage/auth-storage";
-import { fetchNotifications } from "../../src/api/notifications";
+import { fetchMyChats } from "../../src/api/chats";
 import { Icon, type IconName } from "../../src/components/Icon";
 import { colors, fontSize, fontWeight } from "../../src/theme";
 
@@ -31,7 +31,7 @@ const ICONS: Record<string, IconName> = {
 export default function TabsLayout() {
   const [isCompany, setIsCompany] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const pathname = usePathname();
 
   // This layout itself never unmounts while any of its tabs are open, so a
@@ -40,14 +40,16 @@ export default function TabsLayout() {
   // on top of this layout, not a remount of it) then getting replaced back
   // here. Re-checking on every route change catches that the moment
   // navigation actually lands back on a tab, and doubles as a cheap way to
-  // refresh the unread-notification badge whenever the user moves around.
+  // refresh the 내 채팅 badge whenever the user moves around. The badge is
+  // unread chat messages (same numbers as the chat list itself) — the
+  // overall notification count lives on the home screen's bell instead.
   useEffect(() => {
     getStoredUser().then((user) => {
       setIsCompany(user?.role === "COMPANY");
       setIsAdmin(user?.role === "ADMIN");
     });
-    fetchNotifications()
-      .then((list) => setUnreadCount(list.filter((n) => !n.isRead).length))
+    fetchMyChats()
+      .then((rooms) => setUnreadChatCount(rooms.reduce((sum, r) => sum + r.unreadCount, 0)))
       .catch(() => {});
   }, [pathname]);
 
@@ -68,7 +70,8 @@ export default function TabsLayout() {
         name="chats"
         options={{
           title: "내 채팅",
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadge:
+            unreadChatCount > 0 ? (unreadChatCount > 99 ? "99+" : unreadChatCount) : undefined,
         }}
       />
       <Tabs.Screen
