@@ -362,6 +362,9 @@ function CustomerMyPageView() {
       </Pressable>
 
       <View style={styles.footerLinks}>
+        <Pressable onPress={() => Linking.openURL(`${API_BASE_URL}/faq`)}>
+          <Text style={styles.footerLink}>자주 묻는 질문</Text>
+        </Pressable>
         <Pressable onPress={() => Linking.openURL(`${API_BASE_URL}/terms`)}>
           <Text style={styles.footerLink}>이용약관</Text>
         </Pressable>
